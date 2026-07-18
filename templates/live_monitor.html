@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  .monitor-grid-container {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  
+  .monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+  
+  .monitor-tile {
+    background-color: rgba(255, 255, 255, 0.01);
+    border: 1.5px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 160px;
+    transition: all 0.25s ease;
+  }
+  
+  .monitor-tile.safe {
+    border-color: rgba(0, 230, 118, 0.25);
+    background-color: rgba(0, 230, 118, 0.02);
+  }
+  .monitor-tile.safe .badge-status {
+    background-color: var(--status-ok-bg);
+    color: var(--status-ok);
+    border: 1px solid var(--status-ok-border);
+  }
+  
+  .monitor-tile.violation {
+    border-color: #ff1744;
+    background-color: rgba(255, 23, 68, 0.04);
+    box-shadow: 0 0 10px rgba(255, 23, 68, 0.1);
+  }
+  .monitor-tile.violation .badge-status {
+    background-color: var(--status-violation-bg);
+    color: var(--status-violation);
+    border: 1px solid var(--status-violation-border);
+    animation: flash-border 1.5s infinite;
+  }
+  
+  @keyframes flash-border {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+  }
+  
+  .monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .monitor-code {
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+  }
+  .badge-status {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  
+  .monitor-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .monitor-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  
+  .monitor-channel {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    background-color: rgba(0, 0, 0, 0.15);
+    padding: 3px 6px;
+    border-radius: 4px;
+    width: fit-content;
+  }
+  
+  .monitor-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+  }
+  .monitor-footer .val {
+    color: var(--text-main);
+    font-weight: 600;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="monitor-grid-container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h3 class="panel-title" style="margin-bottom: 0;">ESD Stations Live Monitor</h3>
+    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">
+      Showing all <span style="color: var(--primary);">20</span> stations in real-time
+    </div>
+  </div>
+  
+  <div class="monitor-grid" id="monitor-grid-el">
+    <!-- JS dynamic rendering -->
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const monitorState = {
+  stations: {}
+};
+
+function renderMonitorGrid() {
+  const grid = document.getElementById("monitor-grid-el");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  const stations = Object.values(monitorState.stations)
+    .filter(st => {
+      const idNum = parseInt(st.id);
+      return !isNaN(idNum) && idNum >= 1 && idNum <= 20;
+    })
+    .sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
+  stations.forEach(station => {
+    const isViol = station.current_state;
+    const tile = document.createElement("div");
+    tile.className = `monitor-tile ${isViol ? 'violation' : 'safe'}`;
+    
+    const cleanCode = station.station_code ? station.station_code.replace("ESD-STN-", "ST-") : "";
+    const lastTime = station.violation_start ? new Date(station.violation_start).toLocaleTimeString() : "--:--:--";
+    
+    tile.innerHTML = `
+      <div>
+        <div class="monitor-header">
+          <span class="monitor-code">${cleanCode}</span>
+          <span class="badge-status">${isViol ? 'VIOLATION' : 'NORMAL'}</span>
+        </div>
+        <div class="monitor-body">
+          <div class="monitor-desc">${station.description || 'Assembly Line Station'}</div>
+          <div class="monitor-channel">DI Channel ${station.kc868_channel}</div>
+        </div>
+      </div>
+      <div class="monitor-footer">
+        <span>Last Alert:</span>
+        <span class="val">${lastTime}</span>
+      </div>
+    `;
+    grid.appendChild(tile);
+  });
+}
+
+async function fetchInitialState() {
+  try {
+    const res = await fetch("/api/v1/stations");
+    const data = await res.json();
+    if (data.status === "success" && Array.isArray(data.data)) {
+      const stationMap = {};
+      data.data.forEach(st => {
+        const idNum = parseInt(st.id);
+        if (!isNaN(idNum) && idNum >= 1 && idNum <= 20) {
+          stationMap[st.id] = st;
+        }
+      });
+      monitorState.stations = stationMap;
+      renderMonitorGrid();
+    }
+  } catch (err) {
+    console.error("Error reading setup mapping data", err);
+  }
+}
+
+document.addEventListener("esd-event", (e) => {
+  const data = e.detail;
+  const stIdNum = parseInt(data.station_id);
+  if (!isNaN(stIdNum) && stIdNum >= 1 && stIdNum <= 20) {
+    if (monitorState.stations[data.station_id]) {
+      monitorState.stations[data.station_id].current_state = (data.event_type === "VIOLATION");
+      monitorState.stations[data.station_id].violation_start = data.violation_start;
+    }
+    renderMonitorGrid();
+  }
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  fetchInitialState();
+});
+</script>
+{% endblock %}

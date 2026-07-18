@@ -1,0 +1,30 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local Database files
+database/*.db
+database/backups/
+
+# Logs
+logs/
+*.log
+
+# Exports
+exports/
+
+# Environment Variables
+.env
+.env.local
+
+# IDE configurations
+.vscode/
+.idea/
+.gemini/

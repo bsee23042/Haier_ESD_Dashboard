@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card-container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h3 class="panel-title" style="margin-bottom: 0;">Active ESD Alarm Console</h3>
+    <span class="badge-alert" id="active-alarms-badge" style="font-size: 0.8rem;">{{ active_events|length }} Active</span>
+  </div>
+
+  <table class="table-custom">
+    <thead>
+      <tr>
+        <th>Trigger Time</th>
+        <th>Station Code</th>
+        <th>Department</th>
+        <th>Live Duration</th>
+        <th>Supervisor Actions</th>
+      </tr>
+    </thead>
+    <tbody id="alarms-tbody">
+      {% if active_events %}
+        {% for ev in active_events %}
+          <tr id="alarm-row-{{ ev.station_id }}" class="alarm-row" data-start-time="{{ ev.event_timestamp.isoformat() }}">
+            <td style="font-family: var(--font-mono); font-weight: 600;">{{ ev.event_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            <td style="font-weight: 700; color: var(--status-violation);">{{ ev.station.station_code.replace("ESD-STN-", "ST-") }}</td>
+            <td style="color: var(--text-muted);">Panel Line</td>
+            <td style="font-family: var(--font-mono); font-weight: bold; color: var(--status-violation);" class="live-duration-col">
+              00:00:00
+            </td>
+            <td>
+              <div style="display: flex; gap: 8px;">
+                {% if not ev.acknowledged %}
+                  <a href="{{ url_for('acknowledge_alarm', event_id=ev.id) }}" class="btn-success" style="padding: 6px 12px; font-size: 0.72rem; text-decoration: none; display: inline-flex; align-items: center;">
+                    Acknowledge
+                  </a>
+                {% else %}
+                  <span style="color: var(--status-ok); font-weight: bold; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                    ✓ Acknowledged
+                  </span>
+                {% endif %}
+                <a href="{{ url_for('reset_alarm', station_id=ev.station_id) }}" class="btn-danger" style="padding: 6px 12px; font-size: 0.72rem; text-decoration: none; display: inline-flex; align-items: center;">
+                  Force Reset
+                </a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr id="no-alarms-row">
+          <td colspan="5" style="text-align: center; color: var(--status-ok); font-weight: 600; padding: 40px;">
+            ✓ All stations safe. No active ESD violations.
+          </td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function startAlarmsClock() {
+  const updateDurations = () => {
+    const rows = document.querySelectorAll(".alarm-row");
+    rows.forEach(row => {
+      const startTimeStr = row.getAttribute("data-start-time");
+      if (!startTimeStr) return;
+      const start = new Date(startTimeStr);
+      const elapsed = Math.floor((new Date() - start) / 1000);
+      const durationCol = row.querySelector(".live-duration-col");
+      if (durationCol) {
+        durationCol.innerText = formatSeconds(elapsed >= 0 ? elapsed : 0);
+      }
+    });
+  };
+  updateDurations();
+  setInterval(updateDurations, 1000);
+}
+
+// Reload on esd-event so that active alarms list stays perfectly synchronized
+document.addEventListener("esd-event", (e) => {
+  window.location.reload();
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  startAlarmsClock();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAIER - ESD MONITORING SYSTEM</title>
+<!-- Inline script to prevent theme flash -->
+<script>
+  (function() {
+    const saved = localStorage.getItem("theme") || "dark";
+    document.documentElement.setAttribute("data-theme", saved);
+  })();
+</script>
+<style>
+  /* --- Dark & Light Theme Variables --- */
+  html[data-theme="dark"] {
+    --bg-base: #0a101d;
+    --bg-sidebar: #0f1624;
+    --bg-surface: #141b2d;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --primary: #0072CE;
+    --primary-hover: #1e88e5;
+    
+    --status-ok: #00e676;
+    --status-ok-bg: rgba(0, 230, 118, 0.05);
+    --status-ok-border: rgba(0, 230, 118, 0.2);
+    
+    --status-violation: #ff1744;
+    --status-violation-bg: rgba(255, 23, 68, 0.08);
+    --status-violation-border: rgba(255, 23, 68, 0.35);
+    --status-violation-glow: rgba(255, 23, 68, 0.3);
+    
+    --text-main: #f5f6f9;
+    --text-muted: #748297;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --card-hover-bg: rgba(255, 255, 255, 0.02);
+    --input-bg: rgba(0, 0, 0, 0.3);
+    --logo-color: #ffffff;
+  }
+
+  html[data-theme="light"] {
+    --bg-base: #f0f4f8;
+    --bg-sidebar: #ffffff;
+    --bg-surface: #ffffff;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --primary: #0072CE;
+    --primary-hover: #00509d;
+    
+    --status-ok: #2e7d32;
+    --status-ok-bg: rgba(46, 125, 50, 0.04);
+    --status-ok-border: rgba(46, 125, 50, 0.25);
+    
+    --status-violation: #c62828;
+    --status-violation-bg: rgba(198, 40, 40, 0.06);
+    --status-violation-border: rgba(198, 40, 40, 0.4);
+    --status-violation-glow: rgba(198, 40, 40, 0.2);
+    
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --card-hover-bg: rgba(0, 114, 206, 0.03);
+    --input-bg: #f8fafc;
+    --logo-color: #00509d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    overflow-x: auto;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  .app-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    min-width: 1200px;
+  }
+
+  /* SIDEBAR SECTION */
+  aside.sidebar {
+    width: 260px;
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 16px;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    transition: background-color 0.3s ease;
+  }
+
+  .sidebar-brand {
+    padding: 0 12px 24px 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .sidebar-brand h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--logo-color);
+    letter-spacing: -0.03em;
+    transition: color 0.3s ease;
+  }
+
+  .sidebar-brand p {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 2px;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 20px;
+    flex-grow: 1;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .nav-item:hover {
+    color: var(--text-main);
+    background-color: var(--card-hover-bg);
+  }
+
+  .nav-item.active {
+    color: #ffffff;
+    background-color: var(--primary);
+  }
+
+  .nav-icon {
+    font-size: 1.1rem;
+  }
+
+  .device-status-widget {
+    background: var(--card-hover-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+
+  .device-status-widget .device-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--status-ok);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .device-status-widget .device-desc {
+    font-size: 0.68rem;
+    color: var(--status-ok);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--status-ok);
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px var(--status-ok);
+  }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+  }
+
+  .user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    background-color: var(--bg-surface);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    font-size: 1.1rem;
+  }
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .user-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .user-role {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  /* MAIN CONTENT AREA */
+  .main-content {
+    margin-left: 260px;
+    flex-grow: 1;
+    padding: 25px 30px;
+    min-width: 0;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 18px;
+    margin-bottom: 25px;
+  }
+
+  .brand-title-main h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--text-main);
+  }
+
+  .brand-title-main p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .top-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .theme-toggle-btn {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .live-pulse-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 114, 206, 0.1);
+    border: 1.5px solid rgba(0, 114, 206, 0.4);
+    color: #38b6ff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #38b6ff;
+    box-shadow: 0 0 8px #38b6ff;
+    animation: pulse-ring 1.5s infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.5; }
+  }
+
+  .header-meta-widgets {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+  }
+
+  .meta-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-widget .lbl { color: var(--text-muted); font-weight: 700; font-size: 0.7rem; text-transform: uppercase;}
+  .meta-widget .val { color: var(--text-main); font-weight: 600;}
+
+  #commstatus-indicator { color: var(--status-ok); font-weight: bold; display: flex; align-items: center; gap: 6px;}
+
+  /* COMMON BLOCKS & TABLES styling */
+  .panel-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text-main);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .card-container {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+  }
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
+  }
+
+  .btn-danger {
+    background-color: var(--status-violation);
+    color: #ffffff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background-color 0.2s;
+  }
+  .btn-danger:hover {
+    background-color: #b71c1c;
+  }
+
+  .btn-success {
+    background-color: var(--status-ok);
+    color: #ffffff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background-color 0.2s;
+  }
+
+  /* Form layouts */
+  .grid-form-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field-group label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .field-group input, .field-group select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+  }
+  .field-group input:focus, .field-group select:focus {
+    border-color: var(--primary);
+    outline: none;
+  }
+
+  /* Tables styling */
+  .table-custom {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    margin-top: 10px;
+  }
+  .table-custom th {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .table-custom td {
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .badge-alert {
+    background-color: var(--status-violation-bg);
+    color: var(--status-violation);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid var(--status-violation-border);
+  }
+  .badge-ok {
+    background-color: var(--status-ok-bg);
+    color: var(--status-ok);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid var(--status-ok-border);
+  }
+
+  footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 40px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+  }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="app-container">
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <div class="sidebar-brand">
+        <h1>Haier</h1>
+        <p>Inspired Living</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="{{ url_for('live_monitor') }}" class="nav-item {% if active_page == 'live_monitor' %}active{% endif %}">
+          <span class="nav-icon">📺</span> Live Monitor
+        </a>
+        <a href="{{ url_for('history') }}" class="nav-item {% if active_page == 'history' %}active{% endif %}">
+          <span class="nav-icon">🕒</span> History
+        </a>
+        <a href="{{ url_for('reports') }}" class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+          <span class="nav-icon">📋</span> Reports
+        </a>
+        <a href="{{ url_for('search') }}" class="nav-item {% if active_page == 'search' %}active{% endif %}">
+          <span class="nav-icon">🔍</span> Search
+        </a>
+        <a href="{{ url_for('alarms') }}" class="nav-item {% if active_page == 'alarms' %}active{% endif %}">
+          <span class="nav-icon">🔔</span> Alarms
+        </a>
+        <a href="{{ url_for('settings_page') }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+          <span class="nav-icon">⚙️</span> Settings
+        </a>
+        <a href="{{ url_for('users_page') }}" class="nav-item {% if active_page == 'users' %}active{% endif %}">
+          <span class="nav-icon">👤</span> Users
+        </a>
+      </nav>
+    </div>
+
+    <div>
+      <div class="device-status-widget">
+        <div class="device-name">
+          <span class="status-dot" id="sidebar-status-dot"></span> + KC868-A32
+        </div>
+        <div class="device-desc" id="polling-status-desc" style="color: var(--status-ok);">
+          CONNECTED
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="avatar">👨‍💻</div>
+          <div class="user-info">
+            <span class="user-name">{{ session.get('username', 'Supervisor') }}</span>
+            <span class="user-role">{{ session.get('role', 'Supervisor') }} (Online)</span>
+          </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="nav-item" style="margin-top:12px; color: var(--status-violation);"><span class="nav-icon">🚪</span> Sign Out</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main-content">
+    <header>
+      <div class="brand-title-main">
+        <h2>HAIER - ESD MONITORING SYSTEM</h2>
+        <p>Smart IoT-Based ESD Violation Dashboard</p>
+      </div>
+      <div class="top-right-controls">
+        <button class="theme-toggle-btn" onclick="toggleTheme()" id="theme-toggle">
+          🌙 Dark Mode
+        </button>
+        <div class="header-meta-widgets">
+          <div class="meta-widget">
+            <span class="lbl">Controller</span>
+            <span class="val" id="commstatus-indicator" style="color: var(--status-ok);">● ONLINE</span>
+          </div>
+          <div class="meta-widget">
+            <span class="lbl">IP Address</span>
+            <span class="val" id="ip-display">192.168.1.100</span>
+          </div>
+          <!-- Clock -->
+          <div class="meta-widget" style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.4rem;">📅</span>
+            <div style="display: flex; flex-direction: column;">
+              <span class="val" id="header-date" style="font-size: 0.8rem; font-weight: 600;">10-07-2026</span>
+              <span class="val" id="header-time" style="font-size: 0.72rem; color: var(--text-muted);">10:35:20 AM</span>
+            </div>
+          </div>
+          <button class="live-pulse-btn">
+            <span class="pulse-dot"></span> Live
+          </button>
+        </div>
+      </div>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    <footer>
+      <p>&copy; 2026 Haier. All Rights Reserved.</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+const appState = {
+  theme: "dark"
+};
+
+function initTheme() {
+  const saved = localStorage.getItem("theme") || "dark";
+  document.documentElement.setAttribute("data-theme", saved);
+  appState.theme = saved;
+  updateThemeButton();
+}
+
+function toggleTheme() {
+  const target = appState.theme === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", target);
+  appState.theme = target;
+  localStorage.setItem("theme", target);
+  updateThemeButton();
+}
+
+function updateThemeButton() {
+  const btn = document.getElementById("theme-toggle");
+  if (btn) {
+    btn.innerText = appState.theme === "dark" ? "🌙 Dark Mode" : "☀️ Light Mode";
+  }
+}
+
+function startLiveClock() {
+  function updateClock() {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateStr = `${day}-${month}-${year}`;
+
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+    const timeStr = `${hoursStr}:${minutes}:${seconds} ${ampm}`;
+
+    const dateEl = document.getElementById("header-date");
+    const timeEl = document.getElementById("header-time");
+    if (dateEl) dateEl.innerText = dateStr;
+    if (timeEl) timeEl.innerText = timeStr;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+}
+
+function formatSeconds(totalSeconds) {
+  const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+  const secs = String(totalSeconds % 60).padStart(2, '0');
+  return `${hrs}:${mins}:${secs}`;
+}
+
+async function fetchConfig() {
+  try {
+    const res = await fetch("/api/v1/config");
+    const payload = await res.json();
+    if (payload.status === "success") {
+      const display = document.getElementById("ip-display");
+      if (display && payload.data && payload.data.KC868_HOST) {
+        display.innerText = payload.data.KC868_HOST;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load config meta", err);
+  }
+}
+
+function initEventStream() {
+  const source = new EventSource("/stream");
+  
+  source.addEventListener("esd_event", (e) => {
+    if (!e || !e.data) return;
+    const data = JSON.parse(e.data);
+    
+    // Broadcast event locally so child pages can listen and react
+    document.dispatchEvent(new CustomEvent("esd-event", { detail: data }));
+  });
+
+  source.addEventListener("comm_status", (e) => {
+    if (!e || !e.data) return;
+    const data = JSON.parse(e.data);
+    const indicator = document.getElementById("commstatus-indicator");
+    const textDesc = document.getElementById("polling-status-desc");
+    const statusDot = document.getElementById("sidebar-status-dot");
+    
+    if (indicator) {
+      if (data.status === "ONLINE") {
+        indicator.innerHTML = `● ONLINE`;
+        indicator.style.color = "var(--status-ok)";
+      } else {
+        indicator.innerHTML = `● OFFLINE`;
+        indicator.style.color = "var(--status-violation)";
+      }
+    }
+    if (statusDot) {
+      if (data.status === "ONLINE") {
+        statusDot.style.backgroundColor = "var(--status-ok)";
+        statusDot.style.boxShadow = "0 0 8px var(--status-ok)";
+      } else {
+        statusDot.style.backgroundColor = "var(--status-violation)";
+        statusDot.style.boxShadow = "0 0 8px var(--status-violation)";
+      }
+    }
+    if (textDesc) {
+      if (data.status === "ONLINE") {
+        textDesc.innerText = "CONNECTED";
+        textDesc.style.color = "var(--status-ok)";
+      } else {
+        textDesc.innerText = "COMM LOST";
+        textDesc.style.color = "var(--status-violation)";
+      }
+    }
+    
+    // Broadcast comm status locally
+    document.dispatchEvent(new CustomEvent("comm-status", { detail: data }));
+  });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initTheme();
+  fetchConfig();
+  initEventStream();
+  startLiveClock();
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

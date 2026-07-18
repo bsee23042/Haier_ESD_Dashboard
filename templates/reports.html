@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  .reports-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .report-metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .report-stat-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .report-stat-card .lbl {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .report-stat-card .val {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary);
+    font-family: var(--font-mono);
+  }
+  
+  .export-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .export-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .export-card h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .export-card p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  
+  /* Print Stylesheet for PDF Print */
+  @media print {
+    body { background: white; color: black; }
+    aside.sidebar, header, .theme-toggle-btn, .export-section, .btn-primary { display: none !important; }
+    .main-content { margin-left: 0; padding: 0; }
+    .card-container, .report-stat-card { border: 1px solid #ccc; background: white; color: black; }
+    .report-stat-card .val { color: black; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-layout">
+  <!-- Selection Controls -->
+  <div class="card-container" style="margin-bottom: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 class="panel-title" style="margin-bottom: 0;">Performance Reports</h3>
+      <div style="display: flex; gap: 8px;">
+        <a href="{{ url_for('reports', range='daily') }}" class="btn-primary {% if selected_range == 'daily' %}active{% endif %}" style="background-color: {% if selected_range == 'daily' %}var(--primary){% else %}var(--border-color){% endif %}; color: var(--text-main);">Daily</a>
+        <a href="{{ url_for('reports', range='weekly') }}" class="btn-primary {% if selected_range == 'weekly' %}active{% endif %}" style="background-color: {% if selected_range == 'weekly' %}var(--primary){% else %}var(--border-color){% endif %}; color: var(--text-main);">Weekly</a>
+        <a href="{{ url_for('reports', range='monthly') }}" class="btn-primary {% if selected_range == 'monthly' %}active{% endif %}" style="background-color: {% if selected_range == 'monthly' %}var(--primary){% else %}var(--border-color){% endif %}; color: var(--text-main);">Monthly</a>
+      </div>
+    </div>
+    
+    <div class="report-metric-row">
+      <div class="report-stat-card">
+        <span class="lbl">Total ESD Violations</span>
+        <span class="val">{{ total_violations }}</span>
+      </div>
+      <div class="report-stat-card">
+        <span class="lbl">Avg. Resolution Duration</span>
+        <span class="val">
+          {% if avg_duration_seconds %}
+            {{ "%02d:%02d:%02d"|format(avg_duration_seconds // 3600, (avg_duration_seconds % 3600) // 60, avg_duration_seconds % 60) }}
+          {% else %}
+            00:00:00
+          {% endif %}
+        </span>
+      </div>
+      <div class="report-stat-card">
+        <span class="lbl">Top Violating Station</span>
+        <span class="val" style="color: var(--status-violation);">{{ top_violator or 'None' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Section -->
+  <h3 class="panel-title" style="margin-bottom: 0;">Export & Download</h3>
+  <div class="export-section">
+    <!-- CSV -->
+    <div class="export-card">
+      <div style="font-size: 2rem;">📊</div>
+      <h4>CSV Export</h4>
+      <p>Raw comma-separated audit trail including logs and timestamps.</p>
+      <a href="{{ url_for('export_csv_report', range=selected_range) }}" class="btn-primary" style="background-color: #1b5e20; width: 100%;">Download CSV</a>
+    </div>
+
+    <!-- Excel -->
+    <div class="export-card">
+      <div style="font-size: 2rem;">📈</div>
+      <h4>Excel Spreadsheet</h4>
+      <p>Formatted spreadsheet report suited for Microsoft Excel reporting.</p>
+      <a href="{{ url_for('export_excel_report', range=selected_range) }}" class="btn-primary" style="background-color: #2e7d32; width: 100%;">Download Excel</a>
+    </div>
+
+    <!-- PDF Print -->
+    <div class="export-card">
+      <div style="font-size: 2rem;">📄</div>
+      <h4>PDF Printable Document</h4>
+      <p>Print-friendly performance summary report of the selected interval.</p>
+      <button onclick="window.print()" class="btn-primary" style="background-color: #b71c1c; width: 100%;">Print report / PDF</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

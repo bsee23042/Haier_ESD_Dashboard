@@ -1,0 +1,610 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  .dashboard-grid-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .left-dashboard-column {
+    flex: 1;
+    min-width: 500px;
+  }
+
+  .right-dashboard-column {
+    width: 440px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* LIVE STATION STATUS */
+  .live-status-container {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+
+  .tile {
+    background-color: rgba(255, 255, 255, 0.01);
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    padding: 18px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .tile .station-code {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
+
+  .tile .status-icon-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .tile .status-icon-circle svg {
+    width: 18px;
+    height: 18px;
+    color: #ffffff;
+  }
+
+  .tile .status-text-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .tile.safe {
+    border: 1.5px solid rgba(0, 230, 118, 0.25);
+    background-color: rgba(0, 230, 118, 0.02);
+  }
+
+  .tile.safe .status-icon-circle {
+    background-color: #00e676;
+  }
+
+  .tile.safe .status-text-label {
+    color: var(--status-ok);
+  }
+
+  .tile.violation {
+    border: 1.5px solid #ff1744;
+    background-color: rgba(255, 23, 68, 0.04);
+    box-shadow: 0 0 10px rgba(255, 23, 68, 0.15);
+  }
+
+  .tile.violation .status-icon-circle {
+    background-color: #ff1744;
+  }
+
+  .tile.violation .station-code {
+    color: var(--status-violation);
+  }
+
+  .tile.violation .status-text-label {
+    color: var(--status-violation);
+  }
+
+  /* CURRENT VIOLATION PREMIUM CARD */
+  .current-violation-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+  }
+
+  .current-violation-card.active-alert {
+    border-color: var(--status-violation-border);
+    box-shadow: 0 0 12px var(--status-violation-glow);
+  }
+
+  .violation-content-box {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background-color: var(--card-hover-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .current-violation-card.active-alert .violation-content-box {
+    background-color: var(--status-violation-bg);
+    border-color: var(--status-violation-border);
+  }
+
+  .violation-badge-container {
+    background-color: var(--card-hover-bg);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .alarm-bell-icon svg { width: 22px; height: 22px; color: var(--text-muted); }
+  .current-violation-card.active-alert .alarm-bell-icon svg { color: var(--status-violation); }
+
+  .violation-details { display: flex; flex-direction: column; gap: 4px; }
+  .violation-station-title { font-size: 1.3rem; font-weight: 800; color: var(--text-main); }
+  .violation-station-title span { color: var(--text-muted); }
+  .current-violation-card.active-alert .violation-station-title span { color: var(--status-violation); }
+  .violation-dept { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+  
+  .violation-meta-table { display: flex; flex-direction: column; gap: 12px; }
+  .meta-row { display: flex; justify-content: space-between; font-size: 0.82rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+  .meta-label { color: var(--text-muted); }
+  .meta-value { color: var(--text-main); font-weight: 600; font-family: var(--font-mono); }
+  .current-violation-card.active-alert .highlight-duration { color: var(--status-violation); }
+
+  /* STATISTICS GRID */
+  .stats-panel-box {
+     background-color: var(--bg-surface);
+     border: 1px solid var(--border-color);
+     border-radius: 12px;
+     padding: 20px;
+  }
+
+  .stats-grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .stat-card-premium {
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    border: 1px solid transparent;
+  }
+
+  .stat-card-premium .number-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+
+  .stat-card-premium .metric-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 6px;
+  }
+
+  .stat-card-premium .icon-svg-box svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .stat-total {
+    background-color: rgba(0, 114, 206, 0.04);
+    border-color: rgba(0, 114, 206, 0.15);
+  }
+  .stat-total .number-value { color: #38b6ff; }
+  .stat-total .metric-title { color: var(--text-muted); }
+  .stat-total .icon-svg-box svg { color: rgba(0, 114, 206, 0.4); }
+
+  .stat-safe {
+    background-color: var(--status-ok-bg);
+    border-color: var(--status-ok-border);
+  }
+  .stat-safe .number-value { color: var(--status-ok); }
+  .stat-safe .metric-title { color: var(--text-muted); }
+  .stat-safe .icon-svg-box svg { color: var(--status-ok); opacity: 0.4; }
+
+  .stat-alert {
+    background-color: var(--status-violation-bg);
+    border-color: var(--status-violation-border);
+  }
+  .stat-alert .number-value { color: var(--status-violation); }
+  .stat-alert .metric-title { color: var(--text-muted); }
+  .stat-alert .icon-svg-box svg { color: var(--status-violation); opacity: 0.4; }
+
+  .stat-today-count {
+    background-color: rgba(156, 39, 176, 0.04);
+    border-color: rgba(156, 39, 176, 0.15);
+  }
+  .stat-today-count .number-value { color: #d500f9; }
+  .stat-today-count .metric-title { color: var(--text-muted); }
+  .stat-today-count .icon-svg-box svg { color: rgba(156, 39, 176, 0.4); }
+
+  /* RECENT VIOLATIONS */
+  .violations-panel {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .violations-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .violations-table { width: 100%; border-collapse: collapse; text-align: left; }
+  .violations-table th { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+  .violations-table td { padding: 14px 16px; font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
+  .cell-time { font-family: var(--font-mono); color: var(--status-violation); font-weight: 600; }
+  .cell-station { font-weight: 700; color: var(--text-main); }
+  .cell-duration { font-family: var(--font-mono); color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid-layout">
+  <!-- LEFT COLUMN -->
+  <div class="left-dashboard-column">
+    <!-- Live Grid -->
+    <div class="live-status-container">
+      <h3 class="panel-title">Live Station Status</h3>
+      <div id="grid">
+        <!-- JS dynamic rendering -->
+      </div>
+    </div>
+
+    <!-- Recent logs -->
+    <div class="violations-panel">
+      <h3 class="panel-title">Recent Violations</h3>
+      <table class="violations-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Station</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody id="violations-tbody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+      <a href="{{ url_for('history') }}" class="btn-primary" style="width: 100%; text-align: center; margin-top: 15px;">View All History</a>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right-dashboard-column">
+    <!-- Current violation details -->
+    <h3 class="panel-title">Current Violation</h3>
+    <div class="current-violation-card" id="primary-alert-card">
+      <div class="violation-content-box">
+        <div class="violation-badge-container">
+          <!-- Switched dynamically -->
+        </div>
+        <div class="violation-details">
+          <h4 class="violation-station-title" id="alert-card-title">All Stations Safe</h4>
+          <p class="violation-dept" id="alert-card-subtitle">Normal Operation Mode</p>
+          <span class="badge-alert-label" id="alert-card-badge" style="width: fit-content; margin-top:4px;">NORMAL</span>
+        </div>
+      </div>
+      <div class="violation-meta-table">
+        <div class="meta-row">
+          <span class="meta-label">📅 Date</span>
+          <span class="meta-value" id="alert-card-date">-- : -- : --</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">🕒 Time</span>
+          <span class="meta-value" id="alert-card-time">-- : -- : --</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">⏳ Duration</span>
+          <span class="meta-value highlight-duration" id="alert-card-duration">00:00:00</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">🛡️ Status</span>
+          <span class="meta-value" id="alert-card-status">Operational Safe Mode Active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Stats -->
+    <div class="stats-panel-box">
+      <h3 class="panel-title">Today's Statistics</h3>
+      <div class="stats-grid-container">
+        <!-- Total -->
+        <div class="stat-card-premium stat-total">
+          <div>
+            <div class="number-value" id="stat-total-val">20</div>
+            <div class="metric-title">Total Stations</div>
+          </div>
+          <div class="icon-svg-box">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+          </div>
+        </div>
+        <!-- Safe -->
+        <div class="stat-card-premium stat-safe">
+          <div>
+            <div class="number-value" id="stat-safe-val">20</div>
+            <div class="metric-title">Safe Stations</div>
+          </div>
+          <div class="icon-svg-box">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </div>
+        </div>
+        <!-- Alerts -->
+        <div class="stat-card-premium stat-alert">
+          <div>
+            <div class="number-value" id="stat-alert-val">0</div>
+            <div class="metric-title">Alert Stations</div>
+          </div>
+          <div class="icon-svg-box">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          </div>
+        </div>
+        <!-- Today's incidents count -->
+        <div class="stat-card-premium stat-today-count">
+          <div>
+            <div class="number-value" id="stat-incidents-val">00</div>
+            <div class="metric-title">Today's Alerts</div>
+          </div>
+          <div class="icon-svg-box">
+            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M18 17H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2zM3 22l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V3c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v19z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dashboardState = {
+  stations: {}
+};
+
+function renderGrid() {
+  const grid = document.getElementById("grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  
+  const dynamicStations = Object.values(dashboardState.stations)
+    .filter(st => {
+      const idNum = parseInt(st.id);
+      return !isNaN(idNum) && idNum >= 1 && idNum <= 20;
+    })
+    .sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
+  dynamicStations.forEach(station => {
+    const isViolated = station.current_state;
+    const tile = document.createElement("div");
+    tile.className = `tile ${isViolated ? 'violation' : 'safe'}`;
+    tile.id = `tile-${station.id}`;
+    
+    const cleanId = station.station_code ? station.station_code.replace("ESD-STN-", "ST-") : "";
+    
+    tile.innerHTML = `
+      <div class="station-code">${cleanId}</div>
+      <div class="status-icon-circle">
+        ${isViolated ? `
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        ` : `
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        `}
+      </div>
+      <div class="status-text-label">${isViolated ? 'ALERT' : 'SAFE'}</div>
+    `;
+    grid.appendChild(tile);
+  });
+}
+
+async function fetchInitialState() {
+  try {
+    const res = await fetch("/api/v1/stations");
+    const data = await res.json();
+    if (data.status === "success" && Array.isArray(data.data)) {
+      const stationMap = {};
+      data.data.forEach(st => {
+        const idNum = parseInt(st.id);
+        if (!isNaN(idNum) && idNum >= 1 && idNum <= 20) {
+          stationMap[st.id] = st;
+        }
+      });
+      dashboardState.stations = stationMap;
+      renderGrid();
+      recalculateStats();
+
+      if (data.today_alerts_count !== undefined) {
+        const incidentsVal = document.getElementById("stat-incidents-val");
+        if (incidentsVal) incidentsVal.innerText = String(data.today_alerts_count).padStart(2, '0');
+      }
+    }
+  } catch (err) {
+    console.error("Error reading setup mapping data", err);
+  }
+}
+
+async function fetchRecentLogs() {
+  try {
+    const res = await fetch("/api/v1/logs?limit=5");
+    const payload = await res.json();
+    if (payload.status === "success" && Array.isArray(payload.data)) {
+      const tbody = document.getElementById("violations-tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      payload.data.forEach(log => {
+        const cleanStName = log.station_code ? log.station_code.replace("ESD-STN-", "ST-") : "";
+        const tr = document.createElement("tr");
+        const parsedTime = log.event_timestamp ? new Date(log.event_timestamp).toLocaleTimeString() : "";
+        const duration = log.duration_seconds ? formatSeconds(log.duration_seconds) : "00:00:00";
+        const isViol = log.event_type === "VIOLATION";
+        
+        tr.innerHTML = `
+          <td class="cell-time">${parsedTime}</td>
+          <td class="cell-station">${cleanStName}</td>
+          <td style="color:var(--text-muted); font-weight:500;">Panel Line</td>
+          <td><span class="${isViol ? 'badge-alert' : 'badge-ok'}">${isViol ? 'ALERT' : 'RESTORED'}</span></td>
+          <td class="cell-duration">${duration}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  } catch(err) {
+    console.error("Error loading history logs", err);
+  }
+}
+
+function recalculateStats() {
+  const stations = Object.values(dashboardState.stations).filter(s => {
+    const idNum = parseInt(s.id);
+    return !isNaN(idNum) && idNum >= 1 && idNum <= 20;
+  });
+  
+  const total = 20; 
+  const critical = stations.filter(s => s.current_state).length;
+  const healthy = total - critical;
+  
+  const totalVal = document.getElementById("stat-total-val");
+  const safeVal = document.getElementById("stat-safe-val");
+  const alertVal = document.getElementById("stat-alert-val");
+  
+  if (totalVal) totalVal.innerText = String(total).padStart(2, '0');
+  if (safeVal) safeVal.innerText = String(healthy).padStart(2, '0');
+  if (alertVal) alertVal.innerText = String(critical).padStart(2, '0');
+  
+  const alertCard = document.getElementById("primary-alert-card");
+  const criticalStations = stations.filter(s => s.current_state).sort((a, b) => parseInt(a.id) - parseInt(b.id));
+  
+  const cardTitle = document.getElementById("alert-card-title");
+  const cardSubtitle = document.getElementById("alert-card-subtitle");
+  const cardBadge = document.getElementById("alert-card-badge");
+  const cardDate = document.getElementById("alert-card-date");
+  const cardTime = document.getElementById("alert-card-time");
+  const cardDuration = document.getElementById("alert-card-duration");
+  const cardStatus = document.getElementById("alert-card-status");
+  const iconContainer = document.querySelector("#primary-alert-card .violation-badge-container");
+  
+  if (criticalStations.length > 0) {
+    const primary = criticalStations[0];
+    if (alertCard) alertCard.className = "current-violation-card active-alert";
+    if (cardBadge) {
+      cardBadge.className = "badge-alert";
+      cardBadge.innerText = "ALERT";
+    }
+    if (cardTitle) cardTitle.innerHTML = primary.station_code ? primary.station_code.replace("ESD-STN-", "STATION ") : "";
+    if (cardSubtitle) cardSubtitle.innerText = primary.description || "Panel Line";
+    
+    if (iconContainer) {
+      iconContainer.innerHTML = `
+        <div class="alarm-bell-icon" style="background-color: rgba(255, 23, 68, 0.2); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <svg fill="currentColor" viewBox="0 0 24 24" style="color: #ff1744; width: 24px; height: 24px;"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+        </div>
+      `;
+    }
+
+    const startDt = primary.violation_start ? new Date(primary.violation_start) : new Date();
+    
+    if (cardDate) cardDate.innerText = startDt.toLocaleDateString();
+    if (cardTime) cardTime.innerText = startDt.toLocaleTimeString();
+    if (cardStatus) cardStatus.innerText = "ESD Violation Detected";
+    
+    if (window._dashboardTimerRef) {
+      clearInterval(window._dashboardTimerRef);
+    }
+    
+    const updateDuration = () => {
+      const elapsedSecs = Math.floor((new Date() - startDt) / 1000);
+      const liveDuration = document.getElementById("alert-card-duration");
+      if (liveDuration) liveDuration.innerText = formatSeconds(elapsedSecs >= 0 ? elapsedSecs : 0);
+    };
+    updateDuration();
+    window._dashboardTimerRef = setInterval(updateDuration, 1000);
+  } else {
+    if (alertCard) alertCard.className = "current-violation-card";
+    if (cardBadge) {
+      cardBadge.className = "badge-alert-label";
+      cardBadge.innerText = "NORMAL";
+    }
+    if (cardTitle) cardTitle.innerHTML = `All Stations Safe`;
+    if (cardSubtitle) cardSubtitle.innerText = "Normal Operation Mode";
+    if (cardDate) cardDate.innerText = "-- : -- : --";
+    if (cardTime) cardTime.innerText = "-- : -- : --";
+    if (cardDuration) cardDuration.innerText = "00:00:00";
+    if (cardStatus) cardStatus.innerText = "Operational Safe Mode Active";
+    
+    if (iconContainer) {
+      iconContainer.innerHTML = `
+        <div class="safe-shield-icon" style="background-color: rgba(0, 230, 118, 0.2); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <svg fill="currentColor" viewBox="0 0 24 24" style="color: #00e676; width: 24px; height: 24px;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+      `;
+    }
+
+    if (window._dashboardTimerRef) {
+      clearInterval(window._dashboardTimerRef);
+      window._dashboardTimerRef = null;
+    }
+  }
+}
+
+// Listen to local SSE broadcast events
+document.addEventListener("esd-event", (e) => {
+  const data = e.detail;
+  const stIdNum = parseInt(data.station_id);
+  if (!isNaN(stIdNum) && stIdNum >= 1 && stIdNum <= 20) {
+    if (dashboardState.stations[data.station_id]) {
+      dashboardState.stations[data.station_id].current_state = (data.event_type === "VIOLATION");
+      dashboardState.stations[data.station_id].violation_start = data.violation_start;
+    }
+    renderGrid();
+    recalculateStats();
+    fetchRecentLogs();
+  }
+  if (data.today_alerts_count !== undefined) {
+    const incidentsVal = document.getElementById("stat-incidents-val");
+    if (incidentsVal) incidentsVal.innerText = String(data.today_alerts_count).padStart(2, '0');
+  }
+});
+
+document.addEventListener("comm-status", (e) => {
+  const data = e.detail;
+  if (data.today_alerts_count !== undefined) {
+    const incidentsVal = document.getElementById("stat-incidents-val");
+    if (incidentsVal) incidentsVal.innerText = String(data.today_alerts_count).padStart(2, '0');
+  }
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  fetchInitialState().then(() => {
+    fetchRecentLogs();
+  });
+});
+</script>
+{% endblock %}
