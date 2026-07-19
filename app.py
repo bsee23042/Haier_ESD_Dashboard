@@ -156,7 +156,7 @@ class EventService:
         self.cfg = app_config
 
     def record_transition(self, station, is_violation, session_ref):
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
         event_type = "VIOLATION" if is_violation else "RESTORED"
         duration_seconds = None
 
@@ -168,7 +168,7 @@ class EventService:
                 .first()
             )
             if last_violation:
-                lv_time = last_violation.event_timestamp.replace(tzinfo=datetime.UTC) if last_violation.event_timestamp.tzinfo is None else last_violation.event_timestamp
+                lv_time = last_violation.event_timestamp.replace(tzinfo=None)
                 duration_seconds = int((now - lv_time).total_seconds())
 
         new_event = db.ESDEvent(
@@ -185,7 +185,7 @@ class EventService:
         session_ref.commit()
 
         # Count total unique alerts triggered today
-        today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
         today_alerts_count = session_ref.query(db.ESDEvent).filter(
             db.ESDEvent.event_type == "VIOLATION",
             db.ESDEvent.event_timestamp >= today_start
@@ -207,7 +207,7 @@ class EventService:
 
     def record_comm_lost(self, session_ref):
         health = db.SystemHealth(
-            check_timestamp=datetime.datetime.now(datetime.UTC),
+            check_timestamp=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             kc868_status="OFFLINE",
             response_time_ms=None,
             notes="Watchdog: consecutive poll failures exceeded threshold",
@@ -218,7 +218,7 @@ class EventService:
 
     def record_comm_ok(self, session_ref, response_time_ms):
         health = db.SystemHealth(
-            check_timestamp=datetime.datetime.now(datetime.UTC),
+            check_timestamp=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             kc868_status="ONLINE",
             response_time_ms=response_time_ms,
         )
@@ -541,7 +541,7 @@ def history():
 @login_required
 def reports():
     range_type = request.args.get("range", "daily")
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
     
     if range_type == "weekly":
         start_time = now - datetime.timedelta(days=7)
@@ -597,7 +597,7 @@ def reports():
 @login_required
 def export_csv_report():
     range_type = request.args.get("range", "daily")
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
     
     if range_type == "weekly":
         start_time = now - datetime.timedelta(days=7)
@@ -638,7 +638,7 @@ def export_csv_report():
 @login_required
 def export_excel_report():
     range_type = request.args.get("range", "daily")
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
     
     if range_type == "weekly":
         start_time = now - datetime.timedelta(days=7)
@@ -881,10 +881,10 @@ def acknowledge_alarm(event_id):
         if ev and not ev.acknowledged:
             ev.acknowledged = True
             ev.acknowledged_by = session.get("user_id")
-            ev.acknowledged_at = datetime.datetime.now(datetime.UTC)
+            ev.acknowledged_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
             session_ref.commit()
             
-            today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+            today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
             today_alerts_count = session_ref.query(db.ESDEvent).join(db.Station).filter(
                 db.Station.id <= 20,
                 db.ESDEvent.event_type == "VIOLATION",
@@ -1129,7 +1129,7 @@ def get_stations():
                 "violation_start": violation_start
             })
 
-        today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
         today_alerts_count = session_ref.query(db.ESDEvent).join(db.Station).filter(
             db.Station.id <= 20,
             db.ESDEvent.event_type == "VIOLATION",
@@ -1229,7 +1229,7 @@ def stream():
         try:
             session_ref = db.get_session()
             try:
-                today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+                today_start = datetime.datetime.now(datetime.UTC).replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
                 today_alerts_count = session_ref.query(db.ESDEvent).join(db.Station).filter(
                     db.Station.id <= 20,
                     db.ESDEvent.event_type == "VIOLATION",
