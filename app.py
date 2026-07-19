@@ -413,15 +413,39 @@ def seed_initial_records():
         for st in extra_stations:
             session_ref.delete(st)
 
+        station_names = {
+            1: "Lightrod pasting",
+            2: "Masking remove",
+            3: "Lightrod connections",
+            4: "Reflector sheet (1)",
+            5: "Reflector sheet (2)",
+            6: "Diffuser Plate",
+            7: "Bare frame support",
+            8: "Open cell",
+            9: "Inverting sides",
+            10: "Screw bare frame",
+            11: "Barcode online",
+            12: "Wifi data cable",
+            13: "Base stand holder",
+            14: "Screw of base stand and holder",
+            15: "Fitting of speaker cover",
+            16: "Main Board",
+            17: "Main board screw",
+            18: "Connection (1)",
+            19: "Connection (2)",
+            20: "Marking"
+        }
+
         existing_stations = {s.id: s for s in session_ref.query(db.Station).all()}
         
         for i in range(1, 21):
+            desc = station_names.get(i, f"Junction Line Station {i:02d}")
             if i not in existing_stations:
                 st = db.Station(
                     id=i,
                     station_code=f"ESD-STN-{i:02d}",
                     kc868_channel=i,
-                    description=f"Assembly Junction Line Station {i:02d}",
+                    description=desc,
                     status="ACTIVE",
                     current_state=False,
                 )
@@ -430,6 +454,7 @@ def seed_initial_records():
                 st = existing_stations[i]
                 st.station_code = f"ESD-STN-{i:02d}"
                 st.kc868_channel = i
+                st.description = desc
                 st.status = "ACTIVE"
                 session_ref.add(st)
                     
@@ -1179,6 +1204,7 @@ def get_logs():
         data = [{
             "id": e.id,
             "station_code": e.station.station_code,
+            "station_description": e.station.description if e.station else "",
             "event_type": e.event_type,
             "event_timestamp": e.event_timestamp.isoformat(),
             "duration_seconds": e.duration_seconds,

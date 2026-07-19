@@ -469,7 +469,7 @@ async function fetchRecentLogs() {
         tr.innerHTML = `
           <td class="cell-time">${parsedTime}</td>
           <td class="cell-station">${cleanStName}</td>
-          <td style="color:var(--text-muted); font-weight:500;">Panel Line</td>
+          <td style="color:var(--text-muted); font-weight:500;">${log.station_description || "Assembly Line"}</td>
           <td><span class="${isViol ? 'badge-alert' : 'badge-ok'}">${isViol ? 'ALERT' : 'RESTORED'}</span></td>
           <td class="cell-duration">${duration}</td>
         `;
@@ -519,7 +519,7 @@ function recalculateStats() {
       cardBadge.innerText = "ALERT";
     }
     if (cardTitle) cardTitle.innerHTML = primary.station_code ? primary.station_code.replace("ESD-STN-", "STATION ") : "";
-    if (cardSubtitle) cardSubtitle.innerText = primary.description || "Panel Line";
+    if (cardSubtitle) cardSubtitle.innerText = primary.description || "Assembly Line";
     
     if (iconContainer) {
       iconContainer.innerHTML = `
