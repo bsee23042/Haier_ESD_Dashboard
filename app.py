@@ -404,6 +404,22 @@ def seed_initial_records():
             )
             session_ref.add(admin_user)
 
+        anas_user = session_ref.query(db.User).filter_by(username="anas").first()
+        if not anas_user:
+            anas_user = db.User(
+                username="anas",
+                password_hash=generate_password_hash("anas123"),
+                role="ADMIN",
+                full_name="Muhammad Anas",
+                is_active=True
+            )
+            session_ref.add(anas_user)
+        else:
+            anas_user.password_hash = generate_password_hash("anas123")
+            anas_user.full_name = "Muhammad Anas"
+            anas_user.role = "ADMIN"
+            session_ref.add(anas_user)
+
         # 1. Clean up events and stations > 20 to avoid integrity errors and ensure exactly 20 stations
         extra_events = session_ref.query(db.ESDEvent).filter(db.ESDEvent.station_id > 20).all()
         for ev in extra_events:
@@ -488,6 +504,7 @@ def login():
             if user and check_password_hash(user.password_hash, password):
                 session["user_id"] = user.id
                 session["username"] = user.username
+                session["full_name"] = user.full_name
                 session["role"] = user.role
                 return redirect(url_for("dashboard"))
             return render_template("login.html", error="Invalid credentials")

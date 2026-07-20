@@ -534,7 +534,7 @@
         <div class="user-profile">
           <div class="avatar">👨‍💻</div>
           <div class="user-info">
-            <span class="user-name">{{ session.get('username', 'Supervisor') }}</span>
+            <span class="user-name">{{ session.get('full_name', session.get('username', 'Supervisor')) }}</span>
             <span class="user-role">{{ session.get('role', 'Supervisor') }} (Online)</span>
           </div>
         </div>
