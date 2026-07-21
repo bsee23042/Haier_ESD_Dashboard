@@ -2,291 +2,29 @@
 
 {% block extra_head %}
 <style>
-  .dashboard-grid-layout {
-    display: flex;
-    gap: 24px;
-    align-items: flex-start;
-  }
-
-  .left-dashboard-column {
-    flex: 1;
-    min-width: 500px;
-  }
-
-  .right-dashboard-column {
-    width: 440px;
-    flex-shrink: 0;
+  .dashboard-main-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-  }
-
-  /* LIVE STATION ASSEMBLY FLOW */
-  .live-status-container {
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
-  }
-
-  #grid {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 14px 8px;
-    padding: 20px 16px;
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-  }
-
-  .flow-badge {
-    background: #0f172a;
-    border: 1px solid var(--border-color);
-    color: var(--text-main);
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 800;
-    font-family: var(--font-mono);
-    letter-spacing: 0.05em;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  }
-
-  .flow-node {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 82px;
-    max-width: 92px;
-    position: relative;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-  }
-
-  .flow-node:hover {
-    transform: translateY(-2px);
-  }
-
-  .flow-node .node-code {
-    font-size: 0.78rem;
-    font-weight: 800;
-    color: var(--text-main);
-    font-family: var(--font-mono);
-    margin-bottom: 3px;
-  }
-
-  .flow-node .node-cat {
-    font-size: 0.58rem;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 4px;
-    white-space: nowrap;
-    line-height: 1;
-  }
-
-  .cat-backlight {
-    background: rgba(0, 114, 206, 0.15);
-    color: #38b6ff;
-    border: 1px solid rgba(0, 114, 206, 0.35);
-  }
-
-  .cat-panel {
-    background: rgba(156, 39, 176, 0.15);
-    color: #e040fb;
-    border: 1px solid rgba(156, 39, 176, 0.35);
-  }
-
-  .cat-assembly {
-    background: rgba(255, 171, 0, 0.15);
-    color: #ffd740;
-    border: 1px solid rgba(255, 171, 0, 0.35);
-  }
-
-  .flow-node .node-name {
-    font-size: 0.63rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-align: center;
-    line-height: 1.15;
-    margin-bottom: 6px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    word-break: break-word;
-  }
-
-  .flow-node .node-circle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 6px;
-    transition: all 0.3s ease;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
-  }
-
-  .flow-node.safe .node-circle {
-    background: #00e676;
-    border: 2px solid #00e676;
-    box-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
-  }
-
-  .flow-node.violation .node-circle {
-    background: #ff1744;
-    border: 2px solid #ff1744;
-    box-shadow: 0 0 14px rgba(255, 23, 68, 0.6);
-    animation: node-pulse 1.5s infinite;
-  }
-
-  @keyframes node-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.7); }
-    70% { box-shadow: 0 0 0 8px rgba(255, 23, 68, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0); }
-  }
-
-  .flow-node .node-status {
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .flow-node.safe .node-status {
-    color: #00e676;
-  }
-
-  .flow-node.violation .node-status {
-    color: #ff1744;
-  }
-
-  .flow-arrow {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    opacity: 0.5;
-    user-select: none;
-  }
-
-  /* Flow Legend */
-  .flow-legend {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text-muted);
-  }
-
-  .legend-group {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-  .legend-dot.pass { background-color: #00e676; box-shadow: 0 0 6px #00e676; }
-  .legend-dot.fail { background-color: #ff1744; box-shadow: 0 0 6px #ff1744; }
-  .legend-dot.warning { background-color: #ffab00; box-shadow: 0 0 6px #ffab00; }
-  .legend-dot.offline { background-color: #748297; }
-
-  /* CURRENT VIOLATION PREMIUM CARD */
-  .current-violation-card {
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.3s ease;
-  }
-
-  .current-violation-card.active-alert {
-    border-color: var(--status-violation-border);
-    box-shadow: 0 0 12px var(--status-violation-glow);
-  }
-
-  .violation-content-box {
-    display: flex;
-    align-items: center;
     gap: 18px;
-    background-color: var(--card-hover-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
   }
 
-  .current-violation-card.active-alert .violation-content-box {
-    background-color: var(--status-violation-bg);
-    border-color: var(--status-violation-border);
-  }
-
-  .violation-badge-container {
-    background-color: var(--card-hover-bg);
-    border-radius: 50%;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .alarm-bell-icon svg { width: 22px; height: 22px; color: var(--text-muted); }
-  .current-violation-card.active-alert .alarm-bell-icon svg { color: var(--status-violation); }
-
-  .violation-details { display: flex; flex-direction: column; gap: 4px; }
-  .violation-station-title { font-size: 1.3rem; font-weight: 800; color: var(--text-main); }
-  .violation-station-title span { color: var(--text-muted); }
-  .current-violation-card.active-alert .violation-station-title span { color: var(--status-violation); }
-  .violation-dept { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
-  
-  .violation-meta-table { display: flex; flex-direction: column; gap: 12px; }
-  .meta-row { display: flex; justify-content: space-between; font-size: 0.82rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-  .meta-label { color: var(--text-muted); }
-  .meta-value { color: var(--text-main); font-weight: 600; font-family: var(--font-mono); }
-  .current-violation-card.active-alert .highlight-duration { color: var(--status-violation); }
-
-  /* STATISTICS GRID */
+  /* TOP STATISTICS BAR (4 COLUMNS) */
   .stats-panel-box {
      background-color: var(--bg-surface);
      border: 1px solid var(--border-color);
      border-radius: 12px;
-     padding: 20px;
+     padding: 16px 20px;
   }
 
   .stats-grid-container {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
   }
 
   .stat-card-premium {
     border-radius: 8px;
-    padding: 16px;
+    padding: 14px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -295,7 +33,7 @@
   }
 
   .stat-card-premium .number-value {
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 800;
     font-family: var(--font-mono);
     line-height: 1;
@@ -306,12 +44,12 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    margin-top: 6px;
+    margin-top: 4px;
   }
 
   .stat-card-premium .icon-svg-box svg {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
   }
 
   .stat-total {
@@ -346,22 +84,281 @@
   .stat-today-count .metric-title { color: var(--text-muted); }
   .stat-today-count .icon-svg-box svg { color: rgba(156, 39, 176, 0.4); }
 
-  /* RECENT VIOLATIONS */
+  /* LIVE STATION ASSEMBLY FLOW (EXACTLY 2 ROWS) */
+  .live-status-container {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  #grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px 12px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 2px;
+  }
+
+  .flow-badge {
+    background: #0f172a;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+  }
+
+  .flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    flex: 1;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .flow-node:hover {
+    transform: translateY(-2px);
+  }
+
+  .flow-node .node-code {
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    margin-bottom: 2px;
+  }
+
+  .flow-node .node-cat {
+    font-size: 0.55rem;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .cat-backlight {
+    background: rgba(0, 114, 206, 0.15);
+    color: #38b6ff;
+    border: 1px solid rgba(0, 114, 206, 0.35);
+  }
+
+  .cat-panel {
+    background: rgba(156, 39, 176, 0.15);
+    color: #e040fb;
+    border: 1px solid rgba(156, 39, 176, 0.35);
+  }
+
+  .cat-assembly {
+    background: rgba(255, 171, 0, 0.15);
+    color: #ffd740;
+    border: 1px solid rgba(255, 171, 0, 0.35);
+  }
+
+  .flow-node .node-name {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.1;
+    margin-bottom: 4px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: break-word;
+  }
+
+  .flow-node .node-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+  }
+
+  .flow-node.safe .node-circle {
+    background: #00e676;
+    border: 2px solid #00e676;
+    box-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
+  }
+
+  .flow-node.violation .node-circle {
+    background: #ff1744;
+    border: 2px solid #ff1744;
+    box-shadow: 0 0 14px rgba(255, 23, 68, 0.6);
+    animation: node-pulse 1.5s infinite;
+  }
+
+  @keyframes node-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(255, 23, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0); }
+  }
+
+  .flow-node .node-status {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .flow-node.safe .node-status {
+    color: #00e676;
+  }
+
+  .flow-node.violation .node-status {
+    color: #ff1744;
+  }
+
+  .flow-arrow {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    opacity: 0.4;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  /* Flow Legend */
+  .flow-legend {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  .legend-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .legend-dot.pass { background-color: #00e676; box-shadow: 0 0 6px #00e676; }
+  .legend-dot.fail { background-color: #ff1744; box-shadow: 0 0 6px #ff1744; }
+  .legend-dot.warning { background-color: #ffab00; box-shadow: 0 0 6px #ffab00; }
+  .legend-dot.offline { background-color: #748297; }
+
+  /* BOTTOM SECTION LAYOUT (CURRENT VIOLATION + RECENT VIOLATIONS) */
+  .bottom-dashboard-layout {
+    display: flex;
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  .current-violation-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 18px;
+    height: 100%;
+    transition: all 0.3s ease;
+  }
+
+  .current-violation-card.active-alert {
+    border-color: var(--status-violation-border);
+    box-shadow: 0 0 12px var(--status-violation-glow);
+  }
+
+  .violation-content-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background-color: var(--card-hover-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .current-violation-card.active-alert .violation-content-box {
+    background-color: var(--status-violation-bg);
+    border-color: var(--status-violation-border);
+  }
+
+  .violation-badge-container {
+    background-color: var(--card-hover-bg);
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .alarm-bell-icon svg { width: 20px; height: 20px; color: var(--text-muted); }
+  .current-violation-card.active-alert .alarm-bell-icon svg { color: var(--status-violation); }
+
+  .violation-details { display: flex; flex-direction: column; gap: 2px; }
+  .violation-station-title { font-size: 1.15rem; font-weight: 800; color: var(--text-main); }
+  .violation-dept { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+  
+  .violation-meta-table { display: flex; flex-direction: column; gap: 8px; }
+  .meta-row { display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+  .meta-label { color: var(--text-muted); }
+  .meta-value { color: var(--text-main); font-weight: 600; font-family: var(--font-mono); }
+  .current-violation-card.active-alert .highlight-duration { color: var(--status-violation); }
+
+  /* RECENT VIOLATIONS PANEL */
   .violations-panel {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 24px;
+    padding: 18px;
+    height: 100%;
   }
-  .violations-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
+
   .violations-table { width: 100%; border-collapse: collapse; text-align: left; }
-  .violations-table th { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
-  .violations-table td { padding: 14px 16px; font-size: 0.85rem; border-bottom: 1px solid var(--border-color); }
+  .violations-table th { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+  .violations-table td { padding: 10px 12px; font-size: 0.82rem; border-bottom: 1px solid var(--border-color); }
   .cell-time { font-family: var(--font-mono); color: var(--status-violation); font-weight: 600; }
   .cell-station { font-weight: 700; color: var(--text-main); }
   .cell-duration { font-family: var(--font-mono); color: var(--text-muted); }
@@ -369,131 +366,136 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-grid-layout">
-  <!-- LEFT COLUMN -->
-  <div class="left-dashboard-column">
-    <!-- Live Assembly Flow Container -->
-    <div class="live-status-container">
-      <h3 class="panel-title">Production Assembly Line Flow</h3>
-      <div id="grid">
-        <!-- Assembly Flow dynamic rendering -->
-      </div>
-      <div class="flow-legend">
-        <div class="legend-group">
-          <span style="font-size:0.7rem; text-transform:uppercase; font-weight:800; color:var(--text-muted);">Lines:</span>
-          <span class="node-cat cat-backlight">Backlight</span>
-          <span class="node-cat cat-panel">Panel Line</span>
-          <span class="node-cat cat-assembly">General Assembly</span>
+<div class="dashboard-main-container">
+  <!-- 1. TOP STATISTICS BAR (FIRST SECTION) -->
+  <div class="stats-panel-box">
+    <div class="stats-grid-container">
+      <!-- Total -->
+      <div class="stat-card-premium stat-total">
+        <div>
+          <div class="number-value" id="stat-total-val">20</div>
+          <div class="metric-title">Total Stations</div>
         </div>
-        <div class="legend-group">
-          <div class="legend-item"><span class="legend-dot pass"></span> PASS</div>
-          <div class="legend-item"><span class="legend-dot fail"></span> FAIL</div>
-          <div class="legend-item"><span class="legend-dot warning"></span> WARNING</div>
-          <div class="legend-item"><span class="legend-dot offline"></span> OFFLINE</div>
+        <div class="icon-svg-box">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
         </div>
       </div>
-    </div>
-
-    <!-- Recent logs -->
-    <div class="violations-panel">
-      <h3 class="panel-title">Recent Violations</h3>
-      <table class="violations-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Station</th>
-            <th>Department Line</th>
-            <th>Status</th>
-            <th>Duration</th>
-          </tr>
-        </thead>
-        <tbody id="violations-tbody">
-          <!-- Dynamically populated -->
-        </tbody>
-      </table>
-      <a href="{{ url_for('history') }}" class="btn-primary" style="width: 100%; text-align: center; margin-top: 15px;">View All History</a>
+      <!-- Safe -->
+      <div class="stat-card-premium stat-safe">
+        <div>
+          <div class="number-value" id="stat-safe-val">20</div>
+          <div class="metric-title">Safe Stations</div>
+        </div>
+        <div class="icon-svg-box">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </div>
+      </div>
+      <!-- Alerts -->
+      <div class="stat-card-premium stat-alert">
+        <div>
+          <div class="number-value" id="stat-alert-val">0</div>
+          <div class="metric-title">Alert Stations</div>
+        </div>
+        <div class="icon-svg-box">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        </div>
+      </div>
+      <!-- Today's incidents count -->
+      <div class="stat-card-premium stat-today-count">
+        <div>
+          <div class="number-value" id="stat-incidents-val">00</div>
+          <div class="metric-title">Today's Alerts</div>
+        </div>
+        <div class="icon-svg-box">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M18 17H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2zM3 22l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V3c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v19z"/></svg>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- RIGHT COLUMN -->
-  <div class="right-dashboard-column">
-    <!-- Today's Stats FIRST as requested -->
-    <div class="stats-panel-box">
-      <h3 class="panel-title">Today's Statistics</h3>
-      <div class="stats-grid-container">
-        <!-- Total -->
-        <div class="stat-card-premium stat-total">
-          <div>
-            <div class="number-value" id="stat-total-val">20</div>
-            <div class="metric-title">Total Stations</div>
+  <!-- 2. MIDDLE PRODUCTION ASSEMBLY LINE FLOW (EXACTLY 2 ROWS) -->
+  <div class="live-status-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+      <h3 class="panel-title" style="margin-bottom:0;">Production Assembly Line Flow</h3>
+      <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">20 Production Stations (2 Lines)</span>
+    </div>
+    <div id="grid">
+      <!-- 2-row assembly flow dynamic rendering -->
+    </div>
+    <div class="flow-legend">
+      <div class="legend-group">
+        <span style="font-size:0.68rem; text-transform:uppercase; font-weight:800; color:var(--text-muted);">Production Lines:</span>
+        <span class="node-cat cat-backlight">Backlight (ST-01..05)</span>
+        <span class="node-cat cat-panel">Panel Line (ST-06..10)</span>
+        <span class="node-cat cat-assembly">General Assembly (ST-11..20)</span>
+      </div>
+      <div class="legend-group">
+        <div class="legend-item"><span class="legend-dot pass"></span> PASS</div>
+        <div class="legend-item"><span class="legend-dot fail"></span> FAIL</div>
+        <div class="legend-item"><span class="legend-dot warning"></span> WARNING</div>
+        <div class="legend-item"><span class="legend-dot offline"></span> OFFLINE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. BOTTOM SECTION (CURRENT VIOLATION + RECENT VIOLATIONS SIDE-BY-SIDE) -->
+  <div class="bottom-dashboard-layout">
+    <!-- Current Violation Card -->
+    <div style="flex: 1; min-width: 340px;">
+      <div class="current-violation-card" id="primary-alert-card">
+        <div style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; letter-spacing: 0.05em;">Primary Alarm Console</div>
+        <div class="violation-content-box">
+          <div class="violation-badge-container">
+            <!-- Switched dynamically -->
           </div>
-          <div class="icon-svg-box">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+          <div class="violation-details">
+            <h4 class="violation-station-title" id="alert-card-title">All Stations Safe</h4>
+            <p class="violation-dept" id="alert-card-subtitle">Normal Operation Mode</p>
+            <span class="badge-alert-label" id="alert-card-badge" style="width: fit-content; margin-top:2px;">NORMAL</span>
           </div>
         </div>
-        <!-- Safe -->
-        <div class="stat-card-premium stat-safe">
-          <div>
-            <div class="number-value" id="stat-safe-val">20</div>
-            <div class="metric-title">Safe Stations</div>
+        <div class="violation-meta-table">
+          <div class="meta-row">
+            <span class="meta-label">📅 Date</span>
+            <span class="meta-value" id="alert-card-date">-- : -- : --</span>
           </div>
-          <div class="icon-svg-box">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <div class="meta-row">
+            <span class="meta-label">🕒 Time</span>
+            <span class="meta-value" id="alert-card-time">-- : -- : --</span>
           </div>
-        </div>
-        <!-- Alerts -->
-        <div class="stat-card-premium stat-alert">
-          <div>
-            <div class="number-value" id="stat-alert-val">0</div>
-            <div class="metric-title">Alert Stations</div>
+          <div class="meta-row">
+            <span class="meta-label">⏳ Duration</span>
+            <span class="meta-value highlight-duration" id="alert-card-duration">00:00:00</span>
           </div>
-          <div class="icon-svg-box">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-          </div>
-        </div>
-        <!-- Today's incidents count -->
-        <div class="stat-card-premium stat-today-count">
-          <div>
-            <div class="number-value" id="stat-incidents-val">00</div>
-            <div class="metric-title">Today's Alerts</div>
-          </div>
-          <div class="icon-svg-box">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M18 17H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2zM3 22l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V3c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v19z"/></svg>
+          <div class="meta-row">
+            <span class="meta-label">🛡️ Status</span>
+            <span class="meta-value" id="alert-card-status">Operational Safe Mode Active</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Current violation details -->
-    <h3 class="panel-title" style="margin-top: 4px;">Current Violation</h3>
-    <div class="current-violation-card" id="primary-alert-card">
-      <div class="violation-content-box">
-        <div class="violation-badge-container">
-          <!-- Switched dynamically -->
+    <!-- Recent Logs Table -->
+    <div style="flex: 1.4; min-width: 440px;">
+      <div class="violations-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 class="panel-title" style="margin-bottom:0;">Recent Violations Log</h3>
+          <a href="{{ url_for('history') }}" class="btn-primary" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none;">View Full History →</a>
         </div>
-        <div class="violation-details">
-          <h4 class="violation-station-title" id="alert-card-title">All Stations Safe</h4>
-          <p class="violation-dept" id="alert-card-subtitle">Normal Operation Mode</p>
-          <span class="badge-alert-label" id="alert-card-badge" style="width: fit-content; margin-top:4px;">NORMAL</span>
-        </div>
-      </div>
-      <div class="violation-meta-table">
-        <div class="meta-row">
-          <span class="meta-label">📅 Date</span>
-          <span class="meta-value" id="alert-card-date">-- : -- : --</span>
-        </div>
-        <div class="meta-row">
-          <span class="meta-label">🕒 Time</span>
-          <span class="meta-value" id="alert-card-time">-- : -- : --</span>
-        </div>
-        <div class="meta-row">
-          <span class="meta-label">⏳ Duration</span>
-          <span class="meta-value highlight-duration" id="alert-card-duration">00:00:00</span>
-        </div>
-        <div class="meta-row">
-          <span class="meta-label">🛡️ Status</span>
-          <span class="meta-value" id="alert-card-status">Operational Safe Mode Active</span>
-        </div>
+        <table class="violations-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Station</th>
+              <th>Department Line</th>
+              <th>Status</th>
+              <th>Duration</th>
+            </tr>
+          </thead>
+          <tbody id="violations-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -525,16 +527,24 @@ function renderGrid() {
     })
     .sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
+  // Row 1 (ST-01 to ST-10)
+  const row1 = document.createElement("div");
+  row1.className = "flow-row";
+
   // START badge
   const startBadge = document.createElement("div");
   startBadge.className = "flow-badge";
   startBadge.innerHTML = `<span>START</span>`;
-  grid.appendChild(startBadge);
+  row1.appendChild(startBadge);
 
   const startArrow = document.createElement("div");
   startArrow.className = "flow-arrow";
   startArrow.innerText = "➔";
-  grid.appendChild(startArrow);
+  row1.appendChild(startArrow);
+
+  // Row 2 (ST-11 to ST-20)
+  const row2 = document.createElement("div");
+  row2.className = "flow-row";
 
   dynamicStations.forEach((station, index) => {
     const isViolated = station.current_state;
@@ -554,34 +564,44 @@ function renderGrid() {
       <div class="node-name" title="${stName}">${stName}</div>
       <div class="node-circle">
         ${isViolated ? `
-          <svg fill="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px; color: #fff;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          <svg fill="currentColor" viewBox="0 0 24 24" style="width: 14px; height: 14px; color: #fff;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
         ` : `
-          <svg fill="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px; color: #fff;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          <svg fill="currentColor" viewBox="0 0 24 24" style="width: 14px; height: 14px; color: #fff;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
         `}
       </div>
       <div class="node-status">${isViolated ? 'FAIL' : 'PASS'}</div>
     `;
-    grid.appendChild(node);
 
-    // Arrow connector between nodes
-    if (index < dynamicStations.length - 1) {
+    if (stIdNum <= 10) {
+      row1.appendChild(node);
       const arrow = document.createElement("div");
       arrow.className = "flow-arrow";
       arrow.innerText = "➔";
-      grid.appendChild(arrow);
+      row1.appendChild(arrow);
+    } else {
+      row2.appendChild(node);
+      if (stIdNum < 20) {
+        const arrow = document.createElement("div");
+        arrow.className = "flow-arrow";
+        arrow.innerText = "➔";
+        row2.appendChild(arrow);
+      }
     }
   });
 
-  // END arrow and badge
+  // END arrow and badge for Row 2
   const endArrow = document.createElement("div");
   endArrow.className = "flow-arrow";
   endArrow.innerText = "➔";
-  grid.appendChild(endArrow);
+  row2.appendChild(endArrow);
 
   const endBadge = document.createElement("div");
   endBadge.className = "flow-badge";
   endBadge.innerHTML = `<span>END</span>`;
-  grid.appendChild(endBadge);
+  row2.appendChild(endBadge);
+
+  grid.appendChild(row1);
+  grid.appendChild(row2);
 }
 
 async function fetchInitialState() {
@@ -612,7 +632,7 @@ async function fetchInitialState() {
 
 async function fetchRecentLogs() {
   try {
-    const res = await fetch("/api/v1/logs?limit=5");
+    const res = await fetch("/api/v1/logs?limit=4");
     const payload = await res.json();
     if (payload.status === "success" && Array.isArray(payload.data)) {
       const tbody = document.getElementById("violations-tbody");
@@ -632,8 +652,8 @@ async function fetchRecentLogs() {
           <td class="cell-time">${parsedTime}</td>
           <td class="cell-station">${cleanStName}</td>
           <td>
-            <span class="node-cat ${catCss}" style="font-size:0.65rem;">${catName}</span>
-            <div style="font-size:0.78rem; color:var(--text-muted); font-weight:500; margin-top:2px;">${log.station_description || ""}</div>
+            <span class="node-cat ${catCss}" style="font-size:0.6rem;">${catName}</span>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500; margin-top:2px;">${log.station_description || ""}</div>
           </td>
           <td><span class="${isViol ? 'badge-alert' : 'badge-ok'}">${isViol ? 'ALERT' : 'RESTORED'}</span></td>
           <td class="cell-duration">${duration}</td>
@@ -687,12 +707,12 @@ function recalculateStats() {
       cardBadge.innerText = "ALERT";
     }
     if (cardTitle) cardTitle.innerHTML = primary.station_code ? primary.station_code.replace("ESD-STN-", "STATION ") : "";
-    if (cardSubtitle) cardSubtitle.innerHTML = `<span class="node-cat ${catInfo.css}" style="font-size:0.68rem; margin-right:4px;">${catInfo.name}</span> ${primary.description || "Station"}`;
+    if (cardSubtitle) cardSubtitle.innerHTML = `<span class="node-cat ${catInfo.css}" style="font-size:0.65rem; margin-right:4px;">${catInfo.name}</span> ${primary.description || "Station"}`;
     
     if (iconContainer) {
       iconContainer.innerHTML = `
-        <div class="alarm-bell-icon" style="background-color: rgba(255, 23, 68, 0.2); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-          <svg fill="currentColor" viewBox="0 0 24 24" style="color: #ff1744; width: 24px; height: 24px;"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+        <div class="alarm-bell-icon" style="background-color: rgba(255, 23, 68, 0.2); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <svg fill="currentColor" viewBox="0 0 24 24" style="color: #ff1744; width: 22px; height: 22px;"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
         </div>
       `;
     }
@@ -730,8 +750,8 @@ function recalculateStats() {
     
     if (iconContainer) {
       iconContainer.innerHTML = `
-        <div class="safe-shield-icon" style="background-color: rgba(0, 230, 118, 0.2); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-          <svg fill="currentColor" viewBox="0 0 24 24" style="color: #00e676; width: 24px; height: 24px;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        <div class="safe-shield-icon" style="background-color: rgba(0, 230, 118, 0.2); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <svg fill="currentColor" viewBox="0 0 24 24" style="color: #00e676; width: 22px; height: 22px;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
         </div>
       `;
     }
