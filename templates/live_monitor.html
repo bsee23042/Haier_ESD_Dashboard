@@ -161,7 +161,10 @@ function renderMonitorGrid() {
           <span class="badge-status">${isViol ? 'VIOLATION' : 'NORMAL'}</span>
         </div>
         <div class="monitor-body">
-          <div class="monitor-desc">${station.description || 'Assembly Line Station'}</div>
+          <div style="margin-bottom: 4px;">
+            <span style="font-size:0.63rem; font-weight:800; padding:2px 6px; border-radius:4px; text-transform:uppercase; ${station.category && station.category.includes('Backlight') ? 'background:rgba(0,114,206,0.15); color:#38b6ff; border:1px solid rgba(0,114,206,0.35);' : (station.category && station.category.includes('Panel') ? 'background:rgba(156,39,176,0.15); color:#e040fb; border:1px solid rgba(156,39,176,0.35);' : 'background:rgba(255,171,0,0.15); color:#ffd740; border:1px solid rgba(255,171,0,0.35);')}">${station.category || 'Assembly Line'}</span>
+          </div>
+          <div class="monitor-desc" style="font-weight:700; color:var(--text-main);">${station.description || 'Station'}</div>
           <div class="monitor-channel">DI Channel ${station.kc868_channel}</div>
         </div>
       </div>

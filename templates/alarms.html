@@ -25,7 +25,11 @@
               {{ ev.event_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
             </td>
             <td style="font-weight: 700; color: var(--status-violation);">{{ ev.station.station_code.replace("ESD-STN-", "ST-") }}</td>
-            <td style="color: var(--text-muted);">{{ ev.station.description }}</td>
+            <td>
+              {% set cat = "Backlight Line" if ev.station.id <= 5 else ("Panel Line" if ev.station.id <= 10 else "General Assembly") %}
+              <div style="font-size: 0.72rem; font-weight: 700; color: {% if ev.station.id <= 5 %}#38b6ff{% elif ev.station.id <= 10 %}#e040fb{% else %}#ffd740{% endif %}; text-transform: uppercase;">{{ cat }}</div>
+              <div style="color: var(--text-muted); font-size: 0.82rem;">{{ ev.station.description }}</div>
+            </td>
             <td style="font-family: var(--font-mono); font-weight: bold; color: var(--status-violation);" class="live-duration-col">
               00:00:00
             </td>

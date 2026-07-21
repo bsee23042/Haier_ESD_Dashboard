@@ -1147,6 +1147,16 @@ def api_get_config():
     })
 
 
+def get_station_category(sid):
+    if 1 <= sid <= 5:
+        return "Backlight Line"
+    elif 6 <= sid <= 10:
+        return "Panel Line"
+    elif 11 <= sid <= 20:
+        return "General Assembly"
+    return "Assembly Line"
+
+
 @app.route("/api/v1/stations", methods=["GET"])
 @login_required
 def get_stations():
@@ -1166,6 +1176,7 @@ def get_stations():
                 "station_code": s.station_code,
                 "kc868_channel": s.kc868_channel,
                 "description": s.description,
+                "category": get_station_category(s.id),
                 "status": s.status,
                 "current_state": s.current_state,
                 "violation_start": violation_start
@@ -1222,6 +1233,7 @@ def get_logs():
             "id": e.id,
             "station_code": e.station.station_code,
             "station_description": e.station.description if e.station else "",
+            "station_category": get_station_category(e.station.id) if e.station else "Assembly Line",
             "event_type": e.event_type,
             "event_timestamp": e.event_timestamp.isoformat(),
             "duration_seconds": e.duration_seconds,

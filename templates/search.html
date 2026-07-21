@@ -59,7 +59,11 @@
             <tr>
               <td style="font-family: var(--font-mono); font-weight: 600;">{{ r.event_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
               <td style="font-weight: 700;">{{ r.station.station_code.replace("ESD-STN-", "ST-") }}</td>
-              <td style="color: var(--text-muted);">{{ r.station.description }}</td>
+               <td>
+                 {% set cat = "Backlight Line" if r.station.id <= 5 else ("Panel Line" if r.station.id <= 10 else "General Assembly") %}
+                 <div style="font-size: 0.72rem; font-weight: 700; color: {% if r.station.id <= 5 %}#38b6ff{% elif r.station.id <= 10 %}#e040fb{% else %}#ffd740{% endif %}; text-transform: uppercase;">{{ cat }}</div>
+                 <div style="color: var(--text-muted); font-size: 0.82rem;">{{ r.station.description }}</div>
+               </td>
               <td>
                 <span class="{% if r.event_type == 'VIOLATION' %}badge-alert{% else %}badge-ok{% endif %}">
                   {{ r.event_type }}

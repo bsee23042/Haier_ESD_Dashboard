@@ -63,8 +63,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 78px;
-    max-width: 88px;
+    min-width: 82px;
+    max-width: 92px;
     position: relative;
     cursor: pointer;
     transition: transform 0.2s ease;
@@ -75,11 +75,41 @@
   }
 
   .flow-node .node-code {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     font-weight: 800;
     color: var(--text-main);
     font-family: var(--font-mono);
-    margin-bottom: 2px;
+    margin-bottom: 3px;
+  }
+
+  .flow-node .node-cat {
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .cat-backlight {
+    background: rgba(0, 114, 206, 0.15);
+    color: #38b6ff;
+    border: 1px solid rgba(0, 114, 206, 0.35);
+  }
+
+  .cat-panel {
+    background: rgba(156, 39, 176, 0.15);
+    color: #e040fb;
+    border: 1px solid rgba(156, 39, 176, 0.35);
+  }
+
+  .cat-assembly {
+    background: rgba(255, 171, 0, 0.15);
+    color: #ffd740;
+    border: 1px solid rgba(255, 171, 0, 0.35);
   }
 
   .flow-node .node-name {
@@ -153,14 +183,19 @@
   .flow-legend {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 24px;
+    justify-content: space-between;
     margin-top: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--border-color);
     font-size: 0.75rem;
     font-weight: 700;
     color: var(--text-muted);
+  }
+
+  .legend-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
 
   .legend-item {
@@ -344,10 +379,18 @@
         <!-- Assembly Flow dynamic rendering -->
       </div>
       <div class="flow-legend">
-        <div class="legend-item"><span class="legend-dot pass"></span> PASS</div>
-        <div class="legend-item"><span class="legend-dot fail"></span> FAIL</div>
-        <div class="legend-item"><span class="legend-dot warning"></span> WARNING</div>
-        <div class="legend-item"><span class="legend-dot offline"></span> OFFLINE</div>
+        <div class="legend-group">
+          <span style="font-size:0.7rem; text-transform:uppercase; font-weight:800; color:var(--text-muted);">Lines:</span>
+          <span class="node-cat cat-backlight">Backlight</span>
+          <span class="node-cat cat-panel">Panel Line</span>
+          <span class="node-cat cat-assembly">General Assembly</span>
+        </div>
+        <div class="legend-group">
+          <div class="legend-item"><span class="legend-dot pass"></span> PASS</div>
+          <div class="legend-item"><span class="legend-dot fail"></span> FAIL</div>
+          <div class="legend-item"><span class="legend-dot warning"></span> WARNING</div>
+          <div class="legend-item"><span class="legend-dot offline"></span> OFFLINE</div>
+        </div>
       </div>
     </div>
 
@@ -359,7 +402,7 @@
           <tr>
             <th>Time</th>
             <th>Station</th>
-            <th>Department</th>
+            <th>Department Line</th>
             <th>Status</th>
             <th>Duration</th>
           </tr>
@@ -463,6 +506,13 @@ const dashboardState = {
   stations: {}
 };
 
+function getLineCategory(idNum) {
+  if (idNum >= 1 && idNum <= 5) return { name: "Backlight", css: "cat-backlight" };
+  if (idNum >= 6 && idNum <= 10) return { name: "Panel Line", css: "cat-panel" };
+  if (idNum >= 11 && idNum <= 20) return { name: "Gen Assembly", css: "cat-assembly" };
+  return { name: "Assembly", css: "cat-assembly" };
+}
+
 function renderGrid() {
   const grid = document.getElementById("grid");
   if (!grid) return;
@@ -490,14 +540,17 @@ function renderGrid() {
     const isViolated = station.current_state;
     const cleanId = station.station_code ? station.station_code.replace("ESD-STN-", "ST-") : "";
     const stName = station.description || "Station";
+    const stIdNum = parseInt(station.id);
+    const catInfo = getLineCategory(stIdNum);
     
     const node = document.createElement("div");
     node.className = `flow-node ${isViolated ? 'violation' : 'safe'}`;
     node.id = `tile-${station.id}`;
-    node.title = `${cleanId}: ${stName}`;
+    node.title = `${cleanId} (${catInfo.name}): ${stName}`;
     
     node.innerHTML = `
       <div class="node-code">${cleanId}</div>
+      <div class="node-cat ${catInfo.css}">${catInfo.name}</div>
       <div class="node-name" title="${stName}">${stName}</div>
       <div class="node-circle">
         ${isViolated ? `
@@ -572,11 +625,16 @@ async function fetchRecentLogs() {
         const parsedTime = log.event_timestamp ? new Date(log.event_timestamp.endsWith('Z') ? log.event_timestamp : log.event_timestamp + 'Z').toLocaleTimeString() : "";
         const duration = log.duration_seconds ? formatSeconds(log.duration_seconds) : "00:00:00";
         const isViol = log.event_type === "VIOLATION";
+        const catName = log.station_category || "Assembly Line";
+        const catCss = catName.includes("Backlight") ? "cat-backlight" : (catName.includes("Panel") ? "cat-panel" : "cat-assembly");
         
         tr.innerHTML = `
           <td class="cell-time">${parsedTime}</td>
           <td class="cell-station">${cleanStName}</td>
-          <td style="color:var(--text-muted); font-weight:500;">${log.station_description || "Assembly Line"}</td>
+          <td>
+            <span class="node-cat ${catCss}" style="font-size:0.65rem;">${catName}</span>
+            <div style="font-size:0.78rem; color:var(--text-muted); font-weight:500; margin-top:2px;">${log.station_description || ""}</div>
+          </td>
           <td><span class="${isViol ? 'badge-alert' : 'badge-ok'}">${isViol ? 'ALERT' : 'RESTORED'}</span></td>
           <td class="cell-duration">${duration}</td>
         `;
@@ -620,13 +678,16 @@ function recalculateStats() {
   
   if (criticalStations.length > 0) {
     const primary = criticalStations[0];
+    const stIdNum = parseInt(primary.id);
+    const catInfo = getLineCategory(stIdNum);
+
     if (alertCard) alertCard.className = "current-violation-card active-alert";
     if (cardBadge) {
       cardBadge.className = "badge-alert";
       cardBadge.innerText = "ALERT";
     }
     if (cardTitle) cardTitle.innerHTML = primary.station_code ? primary.station_code.replace("ESD-STN-", "STATION ") : "";
-    if (cardSubtitle) cardSubtitle.innerText = primary.description || "Assembly Line";
+    if (cardSubtitle) cardSubtitle.innerHTML = `<span class="node-cat ${catInfo.css}" style="font-size:0.68rem; margin-right:4px;">${catInfo.name}</span> ${primary.description || "Station"}`;
     
     if (iconContainer) {
       iconContainer.innerHTML = `
