@@ -655,22 +655,121 @@ def export_csv_report():
             db.ESDEvent.event_timestamp >= start_time
         ).order_by(db.ESDEvent.event_timestamp.desc()).all()
         
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["Log ID", "Station Code", "Transition Event", "Timestamp", "Duration (Sec)", "Acknowledged"])
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "ESD Audit Trail"
         
-        for e in events:
-            writer.writerow([
-                e.id,
-                e.station.station_code.replace("ESD-STN-", "ST-") if e.station else "",
-                e.event_type,
-                e.event_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                e.duration_seconds if e.duration_seconds is not None else "--",
-                "YES" if e.acknowledged else "NO"
-            ])
+        ws.views.sheetView[0].showGridLines = True
+        
+        font_title = Font(name="Segoe UI", size=14, bold=True, color="FFFFFF")
+        fill_title = PatternFill(start_color="0072CE", end_color="0072CE", fill_type="solid")
+        font_meta_lbl = Font(name="Segoe UI", size=10, bold=True, color="748297")
+        font_meta_val = Font(name="Segoe UI", size=10, bold=True, color="141B2D")
+        font_header = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+        fill_header = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+        font_data = Font(name="Segoe UI", size=10, color="000000")
+        fill_even = PatternFill(start_color="F2F4F8", end_color="F2F4F8", fill_type="solid")
+        
+        thin_border = Border(
+            left=Side(style='thin', color='D9D9D9'),
+            right=Side(style='thin', color='D9D9D9'),
+            top=Side(style='thin', color='D9D9D9'),
+            bottom=Side(style='thin', color='D9D9D9')
+        )
+        
+        ws.merge_cells('A1:F1')
+        title_cell = ws['A1']
+        title_cell.value = "HAIER - ESD MONITORING SYSTEM"
+        title_cell.font = font_title
+        title_cell.fill = fill_title
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[1].height = 40
+        
+        ws['A2'] = "Report Type:"
+        ws['A2'].font = font_meta_lbl
+        ws['B2'] = range_type.upper()
+        ws['B2'].font = font_meta_val
+        
+        ws['A3'] = "Generated At:"
+        ws['A3'].font = font_meta_lbl
+        ws['B3'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ws['B3'].font = font_meta_val
+        
+        headers = ["S.No", "Station Code", "Transition Event", "Timestamp", "Duration (HH:MM:SS)", "Acknowledged"]
+        for col_idx, text_val in enumerate(headers, start=1):
+            cell = ws.cell(row=5, column=col_idx, value=text_val)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = thin_border
+        ws.row_dimensions[5].height = 26
+        
+        row_idx = 6
+        for idx, e in enumerate(events, start=1):
+            c1 = ws.cell(row=row_idx, column=1, value=idx)
+            c1.alignment = Alignment(horizontal="center")
             
-        response = Response(output.getvalue(), mimetype="text/csv")
-        response.headers["Content-Disposition"] = f"attachment; filename=esd_report_{range_type}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
+            st_code = e.station.station_code.replace("ESD-STN-", "ST-") if e.station else ""
+            c2 = ws.cell(row=row_idx, column=2, value=st_code)
+            c2.alignment = Alignment(horizontal="center")
+            
+            c3 = ws.cell(row=row_idx, column=3, value=e.event_type)
+            c3.alignment = Alignment(horizontal="center")
+            
+            naive_dt = e.event_timestamp.replace(tzinfo=None)
+            c4 = ws.cell(row=row_idx, column=4, value=naive_dt)
+            c4.number_format = 'yyyy-mm-dd hh:mm:ss'
+            c4.alignment = Alignment(horizontal="center")
+            
+            dur_str = "--"
+            if e.duration_seconds is not None:
+                hrs = e.duration_seconds // 3600
+                mins = (e.duration_seconds % 3600) // 60
+                secs = e.duration_seconds % 60
+                dur_str = f"{hrs:02d}:{mins:02d}:{secs:02d}"
+            c5 = ws.cell(row=row_idx, column=5, value=dur_str)
+            c5.alignment = Alignment(horizontal="center")
+            
+            ack_str = "YES" if e.acknowledged else "NO"
+            c6 = ws.cell(row=row_idx, column=6, value=ack_str)
+            c6.alignment = Alignment(horizontal="center")
+            
+            for col_idx in range(1, 7):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                cell.font = font_data
+                cell.border = thin_border
+                if row_idx % 2 == 0:
+                    cell.fill = fill_even
+            ws.row_dimensions[row_idx].height = 20
+            row_idx += 1
+            
+        for col in ws.columns:
+            max_len = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                if cell.row == 1:
+                    continue
+                val = cell.value
+                if val is not None:
+                    if isinstance(val, datetime.datetime):
+                        val_len = 19
+                    else:
+                        val_len = len(str(val))
+                    if val_len > max_len:
+                        max_len = val_len
+            ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
+            
+        ws.freeze_panes = 'A6'
+        
+        if row_idx > 6:
+            ws.auto_filter.ref = f"A5:F{row_idx - 1}"
+            
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        response = Response(output.read(), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response.headers["Content-Disposition"] = f"attachment; filename=esd_report_{range_type}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
         return response
     finally:
         db.remove_session()
@@ -700,18 +799,16 @@ def export_excel_report():
         ws = wb.active
         ws.title = "ESD Audit Trail"
         
-        # Display Grid Lines
         ws.views.sheetView[0].showGridLines = True
         
-        # Styles
         font_title = Font(name="Segoe UI", size=14, bold=True, color="FFFFFF")
-        fill_title = PatternFill(start_color="0072CE", end_color="0072CE", fill_type="solid") # Haier Blue
+        fill_title = PatternFill(start_color="0072CE", end_color="0072CE", fill_type="solid")
         font_meta_lbl = Font(name="Segoe UI", size=10, bold=True, color="748297")
         font_meta_val = Font(name="Segoe UI", size=10, bold=True, color="141B2D")
         font_header = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
-        fill_header = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid") # Navy Blue
+        fill_header = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
         font_data = Font(name="Segoe UI", size=10, color="000000")
-        fill_even = PatternFill(start_color="F2F4F8", end_color="F2F4F8", fill_type="solid") # Grey Zebra
+        fill_even = PatternFill(start_color="F2F4F8", end_color="F2F4F8", fill_type="solid")
         
         thin_border = Border(
             left=Side(style='thin', color='D9D9D9'),
@@ -720,7 +817,6 @@ def export_excel_report():
             bottom=Side(style='thin', color='D9D9D9')
         )
         
-        # Merged Title Block
         ws.merge_cells('A1:F1')
         title_cell = ws['A1']
         title_cell.value = "HAIER - ESD MONITORING SYSTEM"
@@ -729,7 +825,6 @@ def export_excel_report():
         title_cell.alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[1].height = 40
         
-        # Metadata Block
         ws['A2'] = "Report Type:"
         ws['A2'].font = font_meta_lbl
         ws['B2'] = range_type.upper()
@@ -740,8 +835,7 @@ def export_excel_report():
         ws['B3'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ws['B3'].font = font_meta_val
         
-        # Headers Row 5
-        headers = ["Log ID", "Station Code", "Transition Event", "Timestamp", "Duration (HH:MM:SS)", "Acknowledged"]
+        headers = ["S.No", "Station Code", "Transition Event", "Timestamp", "Duration (HH:MM:SS)", "Acknowledged"]
         for col_idx, text_val in enumerate(headers, start=1):
             cell = ws.cell(row=5, column=col_idx, value=text_val)
             cell.font = font_header
@@ -751,27 +845,22 @@ def export_excel_report():
         ws.row_dimensions[5].height = 26
         
         row_idx = 6
-        for e in events:
-            # 1. Log ID
-            c1 = ws.cell(row=row_idx, column=1, value=e.id)
+        for idx, e in enumerate(events, start=1):
+            c1 = ws.cell(row=row_idx, column=1, value=idx)
             c1.alignment = Alignment(horizontal="center")
             
-            # 2. Station Code
             st_code = e.station.station_code.replace("ESD-STN-", "ST-") if e.station else ""
             c2 = ws.cell(row=row_idx, column=2, value=st_code)
             c2.alignment = Alignment(horizontal="center")
             
-            # 3. Transition Event
             c3 = ws.cell(row=row_idx, column=3, value=e.event_type)
             c3.alignment = Alignment(horizontal="center")
             
-            # 4. Timestamp
             naive_dt = e.event_timestamp.replace(tzinfo=None)
             c4 = ws.cell(row=row_idx, column=4, value=naive_dt)
             c4.number_format = 'yyyy-mm-dd hh:mm:ss'
             c4.alignment = Alignment(horizontal="center")
             
-            # 5. Duration (HH:MM:SS)
             dur_str = "--"
             if e.duration_seconds is not None:
                 hrs = e.duration_seconds // 3600
@@ -781,7 +870,6 @@ def export_excel_report():
             c5 = ws.cell(row=row_idx, column=5, value=dur_str)
             c5.alignment = Alignment(horizontal="center")
             
-            # 6. Acknowledged
             ack_str = "YES" if e.acknowledged else "NO"
             c6 = ws.cell(row=row_idx, column=6, value=ack_str)
             c6.alignment = Alignment(horizontal="center")
@@ -795,7 +883,6 @@ def export_excel_report():
             ws.row_dimensions[row_idx].height = 20
             row_idx += 1
             
-        # Column width fitting
         for col in ws.columns:
             max_len = 0
             col_letter = get_column_letter(col[0].column)
@@ -812,10 +899,8 @@ def export_excel_report():
                         max_len = val_len
             ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
             
-        # Freeze rows above 6
         ws.freeze_panes = 'A6'
         
-        # Auto-filters
         if row_idx > 6:
             ws.auto_filter.ref = f"A5:F{row_idx - 1}"
             
@@ -1252,22 +1337,121 @@ def export_csv():
     try:
         events = session_ref.query(db.ESDEvent).options(joinedload(db.ESDEvent.station)).join(db.Station).filter(db.Station.id <= 20).order_by(db.ESDEvent.event_timestamp.desc()).all()
         
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["Log ID", "Station Code", "Transition Event", "Timestamp", "Duration (Sec)", "Acknowledged"])
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "ESD Audit Trail"
         
-        for e in events:
-            writer.writerow([
-                e.id,
-                e.station.station_code.replace("ESD-STN-", "ST-") if e.station else "",
-                e.event_type,
-                e.event_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                e.duration_seconds if e.duration_seconds is not None else "--",
-                "YES" if e.acknowledged else "NO"
-            ])
+        ws.views.sheetView[0].showGridLines = True
+        
+        font_title = Font(name="Segoe UI", size=14, bold=True, color="FFFFFF")
+        fill_title = PatternFill(start_color="0072CE", end_color="0072CE", fill_type="solid")
+        font_meta_lbl = Font(name="Segoe UI", size=10, bold=True, color="748297")
+        font_meta_val = Font(name="Segoe UI", size=10, bold=True, color="141B2D")
+        font_header = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+        fill_header = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+        font_data = Font(name="Segoe UI", size=10, color="000000")
+        fill_even = PatternFill(start_color="F2F4F8", end_color="F2F4F8", fill_type="solid")
+        
+        thin_border = Border(
+            left=Side(style='thin', color='D9D9D9'),
+            right=Side(style='thin', color='D9D9D9'),
+            top=Side(style='thin', color='D9D9D9'),
+            bottom=Side(style='thin', color='D9D9D9')
+        )
+        
+        ws.merge_cells('A1:F1')
+        title_cell = ws['A1']
+        title_cell.value = "HAIER - ESD MONITORING SYSTEM"
+        title_cell.font = font_title
+        title_cell.fill = fill_title
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[1].height = 40
+        
+        ws['A2'] = "Report Type:"
+        ws['A2'].font = font_meta_lbl
+        ws['B2'] = "AUDIT TRAIL"
+        ws['B2'].font = font_meta_val
+        
+        ws['A3'] = "Generated At:"
+        ws['A3'].font = font_meta_lbl
+        ws['B3'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ws['B3'].font = font_meta_val
+        
+        headers = ["S.No", "Station Code", "Transition Event", "Timestamp", "Duration (HH:MM:SS)", "Acknowledged"]
+        for col_idx, text_val in enumerate(headers, start=1):
+            cell = ws.cell(row=5, column=col_idx, value=text_val)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = thin_border
+        ws.row_dimensions[5].height = 26
+        
+        row_idx = 6
+        for idx, e in enumerate(events, start=1):
+            c1 = ws.cell(row=row_idx, column=1, value=idx)
+            c1.alignment = Alignment(horizontal="center")
             
-        response = Response(output.getvalue(), mimetype="text/csv")
-        response.headers["Content-Disposition"] = f"attachment; filename=esd_audit_trail_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
+            st_code = e.station.station_code.replace("ESD-STN-", "ST-") if e.station else ""
+            c2 = ws.cell(row=row_idx, column=2, value=st_code)
+            c2.alignment = Alignment(horizontal="center")
+            
+            c3 = ws.cell(row=row_idx, column=3, value=e.event_type)
+            c3.alignment = Alignment(horizontal="center")
+            
+            naive_dt = e.event_timestamp.replace(tzinfo=None)
+            c4 = ws.cell(row=row_idx, column=4, value=naive_dt)
+            c4.number_format = 'yyyy-mm-dd hh:mm:ss'
+            c4.alignment = Alignment(horizontal="center")
+            
+            dur_str = "--"
+            if e.duration_seconds is not None:
+                hrs = e.duration_seconds // 3600
+                mins = (e.duration_seconds % 3600) // 60
+                secs = e.duration_seconds % 60
+                dur_str = f"{hrs:02d}:{mins:02d}:{secs:02d}"
+            c5 = ws.cell(row=row_idx, column=5, value=dur_str)
+            c5.alignment = Alignment(horizontal="center")
+            
+            ack_str = "YES" if e.acknowledged else "NO"
+            c6 = ws.cell(row=row_idx, column=6, value=ack_str)
+            c6.alignment = Alignment(horizontal="center")
+            
+            for col_idx in range(1, 7):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                cell.font = font_data
+                cell.border = thin_border
+                if row_idx % 2 == 0:
+                    cell.fill = fill_even
+            ws.row_dimensions[row_idx].height = 20
+            row_idx += 1
+            
+        for col in ws.columns:
+            max_len = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                if cell.row == 1:
+                    continue
+                val = cell.value
+                if val is not None:
+                    if isinstance(val, datetime.datetime):
+                        val_len = 19
+                    else:
+                        val_len = len(str(val))
+                    if val_len > max_len:
+                        max_len = val_len
+            ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
+            
+        ws.freeze_panes = 'A6'
+        
+        if row_idx > 6:
+            ws.auto_filter.ref = f"A5:F{row_idx - 1}"
+            
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        response = Response(output.read(), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response.headers["Content-Disposition"] = f"attachment; filename=esd_audit_trail_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
         return response
     finally:
         db.remove_session()
