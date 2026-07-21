@@ -35,7 +35,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
-    gap: 12px 6px;
+    gap: 14px 8px;
     padding: 20px 16px;
     background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--border-color);
@@ -63,7 +63,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 54px;
+    min-width: 78px;
+    max-width: 88px;
     position: relative;
     cursor: pointer;
     transition: transform 0.2s ease;
@@ -74,11 +75,25 @@
   }
 
   .flow-node .node-code {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 800;
-    color: var(--text-muted);
+    color: var(--text-main);
     font-family: var(--font-mono);
+    margin-bottom: 2px;
+  }
+
+  .flow-node .node-name {
+    font-size: 0.63rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.15;
     margin-bottom: 6px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    word-break: break-word;
   }
 
   .flow-node .node-circle {
@@ -474,14 +489,16 @@ function renderGrid() {
   dynamicStations.forEach((station, index) => {
     const isViolated = station.current_state;
     const cleanId = station.station_code ? station.station_code.replace("ESD-STN-", "ST-") : "";
+    const stName = station.description || "Station";
     
     const node = document.createElement("div");
     node.className = `flow-node ${isViolated ? 'violation' : 'safe'}`;
     node.id = `tile-${station.id}`;
-    node.title = `${cleanId}: ${station.description || 'Station'}`;
+    node.title = `${cleanId}: ${stName}`;
     
     node.innerHTML = `
       <div class="node-code">${cleanId}</div>
+      <div class="node-name" title="${stName}">${stName}</div>
       <div class="node-circle">
         ${isViolated ? `
           <svg fill="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px; color: #fff;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
