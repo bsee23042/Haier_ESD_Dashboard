@@ -20,8 +20,10 @@
     <tbody id="alarms-tbody">
       {% if active_events %}
         {% for ev in active_events %}
-          <tr id="alarm-row-{{ ev.station_id }}" class="alarm-row" data-start-time="{{ ev.event_timestamp.isoformat() }}">
-            <td style="font-family: var(--font-mono); font-weight: 600;">{{ ev.event_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <tr id="alarm-row-{{ ev.station_id }}" class="alarm-row" data-start-time="{{ ev.event_timestamp.isoformat() }}Z">
+            <td style="font-family: var(--font-mono); font-weight: 600;" class="trigger-time-col">
+              {{ ev.event_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+            </td>
             <td style="font-weight: 700; color: var(--status-violation);">{{ ev.station.station_code.replace("ESD-STN-", "ST-") }}</td>
             <td style="color: var(--text-muted);">{{ ev.station.description }}</td>
             <td style="font-family: var(--font-mono); font-weight: bold; color: var(--status-violation);" class="live-duration-col">
@@ -60,12 +62,26 @@
 {% block extra_js %}
 <script>
 function startAlarmsClock() {
-  const updateDurations = () => {
+  const updateTimes = () => {
     const rows = document.querySelectorAll(".alarm-row");
     rows.forEach(row => {
-      const startTimeStr = row.getAttribute("data-start-time");
+      let startTimeStr = row.getAttribute("data-start-time");
       if (!startTimeStr) return;
+      if (!startTimeStr.endsWith("Z")) {
+        startTimeStr += "Z";
+      }
       const start = new Date(startTimeStr);
+
+      // Format Trigger Time to local date and time
+      const triggerCol = row.querySelector(".trigger-time-col");
+      if (triggerCol && !triggerCol.getAttribute("data-formatted")) {
+        const localDate = start.toLocaleDateString();
+        const localTime = start.toLocaleTimeString();
+        triggerCol.innerText = `${localDate} ${localTime}`;
+        triggerCol.setAttribute("data-formatted", "true");
+      }
+
+      // Calculate live duration
       const elapsed = Math.floor((new Date() - start) / 1000);
       const durationCol = row.querySelector(".live-duration-col");
       if (durationCol) {
@@ -73,8 +89,8 @@ function startAlarmsClock() {
       }
     });
   };
-  updateDurations();
-  setInterval(updateDurations, 1000);
+  updateTimes();
+  setInterval(updateTimes, 1000);
 }
 
 // Reload on esd-event so that active alarms list stays perfectly synchronized
