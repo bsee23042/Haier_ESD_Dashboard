@@ -60,6 +60,52 @@
     color: var(--text-muted);
     margin-bottom: 12px;
   }
+
+  .node-cat {
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    display: inline-block;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  /* Dark Mode Category Pills */
+  html[data-theme="dark"] .cat-backlight {
+    background: rgba(0, 114, 206, 0.2);
+    color: #38b6ff;
+    border: 1px solid rgba(0, 114, 206, 0.45);
+  }
+  html[data-theme="dark"] .cat-panel {
+    background: rgba(156, 39, 176, 0.2);
+    color: #e040fb;
+    border: 1px solid rgba(156, 39, 176, 0.45);
+  }
+  html[data-theme="dark"] .cat-assembly {
+    background: rgba(255, 171, 0, 0.2);
+    color: #ffd740;
+    border: 1px solid rgba(255, 171, 0, 0.45);
+  }
+
+  /* Light Mode Category Pills */
+  html[data-theme="light"] .cat-backlight {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+  }
+  html[data-theme="light"] .cat-panel {
+    background: #fae8ff;
+    color: #a21caf;
+    border: 1px solid #f0abfc;
+  }
+  html[data-theme="light"] .cat-assembly {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+  }
   
   /* Print Stylesheet for PDF Print */
   @media print {
@@ -105,6 +151,68 @@
         <span class="val" style="color: var(--status-violation);">{{ top_violator or 'None' }}</span>
       </div>
     </div>
+  </div>
+
+  <!-- Detailed Period Log -->
+  <div class="card-container">
+    <h3 class="panel-title">Detailed Violations Log ({{ selected_range|upper }} Interval)</h3>
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th style="width: 50px; text-align: center;">S.No</th>
+          <th>Start Time</th>
+          <th>End/Resolution Time</th>
+          <th>Station</th>
+          <th>Department Line</th>
+          <th>Event Type</th>
+          <th>Duration</th>
+          <th>Acknowledged</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if events %}
+          {% for r in events %}
+            <tr>
+              <td style="text-align: center; font-weight: 700;">{{ loop.index }}</td>
+              <td style="font-family: var(--font-mono); font-weight: 600;">{{ r.start_time }}</td>
+              <td style="font-family: var(--font-mono); font-weight: 600; color: {% if r.end_time == 'Active' %}var(--status-violation){% else %}var(--text-main){% endif %};">{{ r.end_time }}</td>
+              <td style="font-weight: 700; color: var(--text-main);">{{ r.station_code }}</td>
+              <td>
+                {% set cat_css = "cat-backlight" if r.station_id <= 5 else ("cat-panel" if r.station_id <= 10 else "cat-assembly") %}
+                {% set cat_lbl = "Backlight" if r.station_id <= 5 else ("Panel Line" if r.station_id <= 10 else "General Assembly") %}
+                <span class="node-cat {{ cat_css }}">{{ cat_lbl }}</span>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">{{ r.description }}</div>
+              </td>
+              <td>
+                <span class="{% if r.event_type == 'VIOLATION' %}badge-alert{% else %}badge-ok{% endif %}">
+                  {{ r.event_type }}
+                </span>
+              </td>
+              <td style="font-family: var(--font-mono); color: var(--text-muted);">
+                {% if r.duration_seconds is not none %}
+                  {{ "%02d:%02d:%02d"|format(r.duration_seconds // 3600, (r.duration_seconds % 3600) // 60, r.duration_seconds % 60) }}
+                {% else %}
+                  --
+                {% endif %}
+              </td>
+              <td>
+                {% if r.acknowledged %}
+                  <span style="color: var(--status-ok); font-weight: bold;">✓ Yes</span>
+                {% else %}
+                  <span style="color: var(--text-muted);">No</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">
+              No violations recorded during this range.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
   </div>
 
   <!-- Export Section -->

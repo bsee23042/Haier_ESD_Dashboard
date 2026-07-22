@@ -564,10 +564,32 @@ def history():
         
         events = query.order_by(db.ESDEvent.event_timestamp.desc()).offset(offset).limit(limit).all()
         
+        events_data = []
+        for e in events:
+            if e.event_type == "RESTORED" and e.duration_seconds is not None:
+                start_dt = e.event_timestamp - datetime.timedelta(seconds=e.duration_seconds)
+                end_dt = e.event_timestamp
+                start_str = start_dt.strftime('%Y-%m-%d %H:%M:%S')
+                end_str = end_dt.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                start_str = e.event_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                end_str = "Active" if (e.event_type == "VIOLATION" and e.station and e.station.current_state) else "--"
+            
+            events_data.append({
+                "station_id": e.station.id if e.station else 0,
+                "station_code": e.station.station_code.replace("ESD-STN-", "ST-") if e.station else "",
+                "description": e.station.description if e.station else "",
+                "event_type": e.event_type,
+                "start_time": start_str,
+                "end_time": end_str,
+                "duration_seconds": e.duration_seconds,
+                "acknowledged": e.acknowledged
+            })
+            
         return render_template(
             "history.html",
             active_page="history",
-            events=events,
+            events=events_data,
             selected_station=station_code,
             selected_event=event_type,
             start_date=start_date_str,
@@ -623,13 +645,42 @@ def reports():
             if st:
                 top_violator = st.station_code.replace("ESD-STN-", "ST-")
                 
+        # Query events within range for report table
+        events = session_ref.query(db.ESDEvent).options(joinedload(db.ESDEvent.station)).join(db.Station).filter(
+            db.Station.id <= 20,
+            db.ESDEvent.event_timestamp >= start_time
+        ).order_by(db.ESDEvent.event_timestamp.desc()).all()
+
+        events_data = []
+        for e in events:
+            if e.event_type == "RESTORED" and e.duration_seconds is not None:
+                start_dt = e.event_timestamp - datetime.timedelta(seconds=e.duration_seconds)
+                end_dt = e.event_timestamp
+                start_str = start_dt.strftime('%Y-%m-%d %H:%M:%S')
+                end_str = end_dt.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                start_str = e.event_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                end_str = "Active" if (e.event_type == "VIOLATION" and e.station and e.station.current_state) else "--"
+            
+            events_data.append({
+                "station_id": e.station.id if e.station else 0,
+                "station_code": e.station.station_code.replace("ESD-STN-", "ST-") if e.station else "",
+                "description": e.station.description if e.station else "",
+                "event_type": e.event_type,
+                "start_time": start_str,
+                "end_time": end_str,
+                "duration_seconds": e.duration_seconds,
+                "acknowledged": e.acknowledged
+            })
+                
         return render_template(
             "reports.html",
             active_page="reports",
             selected_range=range_type,
             total_violations=total_violations,
             avg_duration_seconds=avg_duration,
-            top_violator=top_violator
+            top_violator=top_violator,
+            events=events_data
         )
     finally:
         db.remove_session()
@@ -677,7 +728,7 @@ def export_csv_report():
             bottom=Side(style='thin', color='D9D9D9')
         )
         
-        ws.merge_cells('A1:F1')
+        ws.merge_cells('A1:G1')
         title_cell = ws['A1']
         title_cell.value = "HAIER - ESD MONITORING SYSTEM"
         title_cell.font = font_title
@@ -695,7 +746,7 @@ def export_csv_report():
         ws['B3'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ws['B3'].font = font_meta_val
         
-        headers = ["S.No", "Station Code", "Transition Event", "Timestamp", "Duration (HH:MM:SS)", "Acknowledged"]
+        headers = ["S.No", "Station Code", "Transition Event", "Violation Start Time", "Violation End Time", "Duration (HH:MM:SS)", "Acknowledged"]
         for col_idx, text_val in enumerate(headers, start=1):
             cell = ws.cell(row=5, column=col_idx, value=text_val)
             cell.font = font_header
@@ -716,10 +767,22 @@ def export_csv_report():
             c3 = ws.cell(row=row_idx, column=3, value=e.event_type)
             c3.alignment = Alignment(horizontal="center")
             
-            naive_dt = e.event_timestamp.replace(tzinfo=None)
-            c4 = ws.cell(row=row_idx, column=4, value=naive_dt)
+            # Start and End Time logic
+            if e.event_type == "RESTORED" and e.duration_seconds is not None:
+                start_dt = e.event_timestamp - datetime.timedelta(seconds=e.duration_seconds)
+                end_val = e.event_timestamp.replace(tzinfo=None)
+            else:
+                start_dt = e.event_timestamp
+                end_val = "--"
+                
+            c4 = ws.cell(row=row_idx, column=4, value=start_dt.replace(tzinfo=None))
             c4.number_format = 'yyyy-mm-dd hh:mm:ss'
             c4.alignment = Alignment(horizontal="center")
+            
+            c5 = ws.cell(row=row_idx, column=5, value=end_val)
+            if isinstance(end_val, datetime.datetime):
+                c5.number_format = 'yyyy-mm-dd hh:mm:ss'
+            c5.alignment = Alignment(horizontal="center")
             
             dur_str = "--"
             if e.duration_seconds is not None:
@@ -727,14 +790,14 @@ def export_csv_report():
                 mins = (e.duration_seconds % 3600) // 60
                 secs = e.duration_seconds % 60
                 dur_str = f"{hrs:02d}:{mins:02d}:{secs:02d}"
-            c5 = ws.cell(row=row_idx, column=5, value=dur_str)
-            c5.alignment = Alignment(horizontal="center")
-            
-            ack_str = "YES" if e.acknowledged else "NO"
-            c6 = ws.cell(row=row_idx, column=6, value=ack_str)
+            c6 = ws.cell(row=row_idx, column=6, value=dur_str)
             c6.alignment = Alignment(horizontal="center")
             
-            for col_idx in range(1, 7):
+            ack_str = "YES" if e.acknowledged else "NO"
+            c7 = ws.cell(row=row_idx, column=7, value=ack_str)
+            c7.alignment = Alignment(horizontal="center")
+            
+            for col_idx in range(1, 8):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.font = font_data
                 cell.border = thin_border
@@ -762,7 +825,7 @@ def export_csv_report():
         ws.freeze_panes = 'A6'
         
         if row_idx > 6:
-            ws.auto_filter.ref = f"A5:F{row_idx - 1}"
+            ws.auto_filter.ref = f"A5:G{row_idx - 1}"
             
         output = io.BytesIO()
         wb.save(output)
@@ -817,7 +880,7 @@ def export_excel_report():
             bottom=Side(style='thin', color='D9D9D9')
         )
         
-        ws.merge_cells('A1:F1')
+        ws.merge_cells('A1:G1')
         title_cell = ws['A1']
         title_cell.value = "HAIER - ESD MONITORING SYSTEM"
         title_cell.font = font_title
@@ -835,7 +898,7 @@ def export_excel_report():
         ws['B3'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ws['B3'].font = font_meta_val
         
-        headers = ["S.No", "Station Code", "Transition Event", "Timestamp", "Duration (HH:MM:SS)", "Acknowledged"]
+        headers = ["S.No", "Station Code", "Transition Event", "Violation Start Time", "Violation End Time", "Duration (HH:MM:SS)", "Acknowledged"]
         for col_idx, text_val in enumerate(headers, start=1):
             cell = ws.cell(row=5, column=col_idx, value=text_val)
             cell.font = font_header
@@ -856,10 +919,22 @@ def export_excel_report():
             c3 = ws.cell(row=row_idx, column=3, value=e.event_type)
             c3.alignment = Alignment(horizontal="center")
             
-            naive_dt = e.event_timestamp.replace(tzinfo=None)
-            c4 = ws.cell(row=row_idx, column=4, value=naive_dt)
+            # Start and End Time logic
+            if e.event_type == "RESTORED" and e.duration_seconds is not None:
+                start_dt = e.event_timestamp - datetime.timedelta(seconds=e.duration_seconds)
+                end_val = e.event_timestamp.replace(tzinfo=None)
+            else:
+                start_dt = e.event_timestamp
+                end_val = "--"
+                
+            c4 = ws.cell(row=row_idx, column=4, value=start_dt.replace(tzinfo=None))
             c4.number_format = 'yyyy-mm-dd hh:mm:ss'
             c4.alignment = Alignment(horizontal="center")
+            
+            c5 = ws.cell(row=row_idx, column=5, value=end_val)
+            if isinstance(end_val, datetime.datetime):
+                c5.number_format = 'yyyy-mm-dd hh:mm:ss'
+            c5.alignment = Alignment(horizontal="center")
             
             dur_str = "--"
             if e.duration_seconds is not None:
@@ -867,14 +942,14 @@ def export_excel_report():
                 mins = (e.duration_seconds % 3600) // 60
                 secs = e.duration_seconds % 60
                 dur_str = f"{hrs:02d}:{mins:02d}:{secs:02d}"
-            c5 = ws.cell(row=row_idx, column=5, value=dur_str)
-            c5.alignment = Alignment(horizontal="center")
-            
-            ack_str = "YES" if e.acknowledged else "NO"
-            c6 = ws.cell(row=row_idx, column=6, value=ack_str)
+            c6 = ws.cell(row=row_idx, column=6, value=dur_str)
             c6.alignment = Alignment(horizontal="center")
             
-            for col_idx in range(1, 7):
+            ack_str = "YES" if e.acknowledged else "NO"
+            c7 = ws.cell(row=row_idx, column=7, value=ack_str)
+            c7.alignment = Alignment(horizontal="center")
+            
+            for col_idx in range(1, 8):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.font = font_data
                 cell.border = thin_border
@@ -902,7 +977,7 @@ def export_excel_report():
         ws.freeze_panes = 'A6'
         
         if row_idx > 6:
-            ws.auto_filter.ref = f"A5:F{row_idx - 1}"
+            ws.auto_filter.ref = f"A5:G{row_idx - 1}"
             
         output = io.BytesIO()
         wb.save(output)
@@ -949,7 +1024,28 @@ def search():
                 dt = datetime.datetime.strptime(end_date_str, "%Y-%m-%d") + datetime.timedelta(days=1)
                 query = query.filter(db.ESDEvent.event_timestamp < dt)
                 
-            results = query.order_by(db.ESDEvent.event_timestamp.desc()).all()
+            events = query.order_by(db.ESDEvent.event_timestamp.desc()).all()
+            
+            for e in events:
+                if e.event_type == "RESTORED" and e.duration_seconds is not None:
+                    start_dt = e.event_timestamp - datetime.timedelta(seconds=e.duration_seconds)
+                    end_dt = e.event_timestamp
+                    start_str = start_dt.strftime('%Y-%m-%d %H:%M:%S')
+                    end_str = end_dt.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    start_str = e.event_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    end_str = "Active" if (e.event_type == "VIOLATION" and e.station and e.station.current_state) else "--"
+                
+                results.append({
+                    "station_id": e.station.id if e.station else 0,
+                    "station_code": e.station.station_code.replace("ESD-STN-", "ST-") if e.station else "",
+                    "description": e.station.description if e.station else "",
+                    "event_type": e.event_type,
+                    "start_time": start_str,
+                    "end_time": end_str,
+                    "duration_seconds": e.duration_seconds,
+                    "acknowledged": e.acknowledged
+                })
             
         return render_template(
             "search.html",
@@ -1359,7 +1455,7 @@ def export_csv():
             bottom=Side(style='thin', color='D9D9D9')
         )
         
-        ws.merge_cells('A1:F1')
+        ws.merge_cells('A1:G1')
         title_cell = ws['A1']
         title_cell.value = "HAIER - ESD MONITORING SYSTEM"
         title_cell.font = font_title
@@ -1377,7 +1473,7 @@ def export_csv():
         ws['B3'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ws['B3'].font = font_meta_val
         
-        headers = ["S.No", "Station Code", "Transition Event", "Timestamp", "Duration (HH:MM:SS)", "Acknowledged"]
+        headers = ["S.No", "Station Code", "Transition Event", "Violation Start Time", "Violation End Time", "Duration (HH:MM:SS)", "Acknowledged"]
         for col_idx, text_val in enumerate(headers, start=1):
             cell = ws.cell(row=5, column=col_idx, value=text_val)
             cell.font = font_header
@@ -1398,10 +1494,22 @@ def export_csv():
             c3 = ws.cell(row=row_idx, column=3, value=e.event_type)
             c3.alignment = Alignment(horizontal="center")
             
-            naive_dt = e.event_timestamp.replace(tzinfo=None)
-            c4 = ws.cell(row=row_idx, column=4, value=naive_dt)
+            # Start and End Time logic
+            if e.event_type == "RESTORED" and e.duration_seconds is not None:
+                start_dt = e.event_timestamp - datetime.timedelta(seconds=e.duration_seconds)
+                end_val = e.event_timestamp.replace(tzinfo=None)
+            else:
+                start_dt = e.event_timestamp
+                end_val = "--"
+                
+            c4 = ws.cell(row=row_idx, column=4, value=start_dt.replace(tzinfo=None))
             c4.number_format = 'yyyy-mm-dd hh:mm:ss'
             c4.alignment = Alignment(horizontal="center")
+            
+            c5 = ws.cell(row=row_idx, column=5, value=end_val)
+            if isinstance(end_val, datetime.datetime):
+                c5.number_format = 'yyyy-mm-dd hh:mm:ss'
+            c5.alignment = Alignment(horizontal="center")
             
             dur_str = "--"
             if e.duration_seconds is not None:
@@ -1409,14 +1517,14 @@ def export_csv():
                 mins = (e.duration_seconds % 3600) // 60
                 secs = e.duration_seconds % 60
                 dur_str = f"{hrs:02d}:{mins:02d}:{secs:02d}"
-            c5 = ws.cell(row=row_idx, column=5, value=dur_str)
-            c5.alignment = Alignment(horizontal="center")
-            
-            ack_str = "YES" if e.acknowledged else "NO"
-            c6 = ws.cell(row=row_idx, column=6, value=ack_str)
+            c6 = ws.cell(row=row_idx, column=6, value=dur_str)
             c6.alignment = Alignment(horizontal="center")
             
-            for col_idx in range(1, 7):
+            ack_str = "YES" if e.acknowledged else "NO"
+            c7 = ws.cell(row=row_idx, column=7, value=ack_str)
+            c7.alignment = Alignment(horizontal="center")
+            
+            for col_idx in range(1, 8):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.font = font_data
                 cell.border = thin_border
@@ -1444,7 +1552,7 @@ def export_csv():
         ws.freeze_panes = 'A6'
         
         if row_idx > 6:
-            ws.auto_filter.ref = f"A5:F{row_idx - 1}"
+            ws.auto_filter.ref = f"A5:G{row_idx - 1}"
             
         output = io.BytesIO()
         wb.save(output)

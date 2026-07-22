@@ -1,5 +1,55 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+<style>
+  .node-cat {
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    display: inline-block;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  /* Dark Theme Category Pills */
+  html[data-theme="dark"] .cat-backlight {
+    background: rgba(0, 114, 206, 0.2);
+    color: #38b6ff;
+    border: 1px solid rgba(0, 114, 206, 0.45);
+  }
+  html[data-theme="dark"] .cat-panel {
+    background: rgba(156, 39, 176, 0.2);
+    color: #e040fb;
+    border: 1px solid rgba(156, 39, 176, 0.45);
+  }
+  html[data-theme="dark"] .cat-assembly {
+    background: rgba(255, 171, 0, 0.2);
+    color: #ffd740;
+    border: 1px solid rgba(255, 171, 0, 0.45);
+  }
+
+  /* Light Theme Category Pills */
+  html[data-theme="light"] .cat-backlight {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+  }
+  html[data-theme="light"] .cat-panel {
+    background: #fae8ff;
+    color: #a21caf;
+    border: 1px solid #f0abfc;
+  }
+  html[data-theme="light"] .cat-assembly {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="card-container">
   <h3 class="panel-title">Station Search Logs</h3>
@@ -45,7 +95,8 @@
     <table class="table-custom">
       <thead>
         <tr>
-          <th>Timestamp</th>
+          <th>Start Time</th>
+          <th>End/Resolution Time</th>
           <th>Station Code</th>
           <th>Department</th>
           <th>Event Type</th>
@@ -57,13 +108,15 @@
         {% if results %}
           {% for r in results %}
             <tr>
-              <td style="font-family: var(--font-mono); font-weight: 600;">{{ r.event_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-              <td style="font-weight: 700;">{{ r.station.station_code.replace("ESD-STN-", "ST-") }}</td>
-               <td>
-                 {% set cat = "Backlight Line" if r.station.id <= 5 else ("Panel Line" if r.station.id <= 10 else "General Assembly") %}
-                 <div style="font-size: 0.72rem; font-weight: 700; color: {% if r.station.id <= 5 %}#38b6ff{% elif r.station.id <= 10 %}#e040fb{% else %}#ffd740{% endif %}; text-transform: uppercase;">{{ cat }}</div>
-                 <div style="color: var(--text-muted); font-size: 0.82rem;">{{ r.station.description }}</div>
-               </td>
+              <td style="font-family: var(--font-mono); font-weight: 600;">{{ r.start_time }}</td>
+              <td style="font-family: var(--font-mono); font-weight: 600; color: {% if r.end_time == 'Active' %}var(--status-violation){% else %}var(--text-main){% endif %};">{{ r.end_time }}</td>
+              <td style="font-weight: 700;">{{ r.station_code }}</td>
+              <td>
+                {% set cat_css = "cat-backlight" if r.station_id <= 5 else ("cat-panel" if r.station_id <= 10 else "cat-assembly") %}
+                {% set cat_lbl = "Backlight Line" if r.station_id <= 5 else ("Panel Line" if r.station_id <= 10 else "General Assembly") %}
+                <span class="node-cat {{ cat_css }}">{{ cat_lbl }}</span>
+                <div style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2px;">{{ r.description }}</div>
+              </td>
               <td>
                 <span class="{% if r.event_type == 'VIOLATION' %}badge-alert{% else %}badge-ok{% endif %}">
                   {{ r.event_type }}
@@ -87,7 +140,7 @@
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">
               No matching records found.
             </td>
           </tr>
