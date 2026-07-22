@@ -229,6 +229,8 @@ def _resolve_database_uri():
 
 
 def run_migrations(eng):
+    if eng.dialect.name != "sqlite":
+        return
     inspector = inspect(eng)
     if not inspector.has_table("esd_events"):
         return
