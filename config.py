@@ -22,15 +22,25 @@ class BaseConfig:
     SESSION_COOKIE_SAMESITE = "Lax"
     PERMANENT_SESSION_LIFETIME = timedelta(hours=12)
 
-    # --- Database (SQLite, WAL mode per §28) ---
+    # --- Database Configuration ---
     DATABASE_DIR = os.path.join(BASE_DIR, "database")
     DATABASE_PATH = os.path.join(DATABASE_DIR, "esd_monitoring.db")
     _raw_db_uri = os.environ.get("DATABASE_URL")
     if _raw_db_uri:
+        _raw_db_uri = _raw_db_uri.strip()
+        if "channel_binding=" in _raw_db_uri:
+            _raw_db_uri = _raw_db_uri.split("&channel_binding=")[0].split("?channel_binding=")[0]
         if _raw_db_uri.startswith("postgres://"):
             _raw_db_uri = _raw_db_uri.replace("postgres://", "postgresql://", 1)
-        SQLALCHEMY_DATABASE_URI = _raw_db_uri
-        SQLALCHEMY_ENGINE_OPTIONS = {}
+            
+        if _raw_db_uri.startswith("postgresql://") or _raw_db_uri.startswith("sqlite://"):
+            SQLALCHEMY_DATABASE_URI = _raw_db_uri
+            SQLALCHEMY_ENGINE_OPTIONS = {}
+        else:
+            SQLALCHEMY_DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
+            SQLALCHEMY_ENGINE_OPTIONS = {
+                "connect_args": {"check_same_thread": False, "timeout": 15},
+            }
     else:
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
         SQLALCHEMY_ENGINE_OPTIONS = {
