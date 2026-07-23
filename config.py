@@ -25,11 +25,17 @@ class BaseConfig:
     # --- Database (SQLite, WAL mode per §28) ---
     DATABASE_DIR = os.path.join(BASE_DIR, "database")
     DATABASE_PATH = os.path.join(DATABASE_DIR, "esd_monitoring.db")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or f"sqlite:///{DATABASE_PATH}"
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "connect_args": {"check_same_thread": False, "timeout": 15},
-    }
+    _raw_db_uri = os.environ.get("DATABASE_URL")
+    if _raw_db_uri:
+        if _raw_db_uri.startswith("postgres://"):
+            _raw_db_uri = _raw_db_uri.replace("postgres://", "postgresql://", 1)
+        SQLALCHEMY_DATABASE_URI = _raw_db_uri
+        SQLALCHEMY_ENGINE_OPTIONS = {}
+    else:
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {"check_same_thread": False, "timeout": 15},
+        }
 
     # --- Hardware / Polling (§2, §5, §25-26) ---
     TOTAL_KC868_CHANNELS = 32
