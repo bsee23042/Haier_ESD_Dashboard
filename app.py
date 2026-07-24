@@ -482,7 +482,14 @@ def seed_initial_records():
         db.remove_session()
 
 
-seed_initial_records()
+@app.context_processor
+def inject_client_info():
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    else:
+        client_ip = request.remote_addr or "127.0.0.1"
+    return dict(client_ip=client_ip)
 
 
 # ==================================================================== #
@@ -1317,13 +1324,20 @@ def change_password():
 @app.route("/api/v1/config", methods=["GET"])
 @login_required
 def api_get_config():
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    else:
+        client_ip = request.remote_addr or "127.0.0.1"
+
     return jsonify({
         "status": "success",
         "data": {
             "KC868_HOST": cfg.KC868_HOST,
             "KC868_PORT": cfg.KC868_PORT,
             "POLL_INTERVAL_MS": cfg.POLL_INTERVAL_MS,
-            "TOTAL_KC868_CHANNELS": 20
+            "TOTAL_KC868_CHANNELS": 20,
+            "CLIENT_IP": client_ip
         }
     })
 

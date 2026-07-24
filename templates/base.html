@@ -560,8 +560,12 @@
             <span class="val" id="commstatus-indicator" style="color: var(--status-ok);">● ONLINE</span>
           </div>
           <div class="meta-widget">
-            <span class="lbl">IP Address</span>
-            <span class="val" id="ip-display">192.168.1.100</span>
+            <span class="lbl">Controller IP</span>
+            <span class="val" id="ip-display">192.168.1.50</span>
+          </div>
+          <div class="meta-widget">
+            <span class="lbl">Device IP</span>
+            <span class="val" id="device-ip-display" style="color: var(--primary); font-weight: 700;">{{ client_ip }}</span>
           </div>
           <!-- Clock -->
           <div class="meta-widget" style="display: flex; align-items: center; gap: 10px;">
@@ -654,6 +658,10 @@ async function fetchConfig() {
       const display = document.getElementById("ip-display");
       if (display && payload.data && payload.data.KC868_HOST) {
         display.innerText = payload.data.KC868_HOST;
+      }
+      const deviceDisplay = document.getElementById("device-ip-display");
+      if (deviceDisplay && payload.data && payload.data.CLIENT_IP) {
+        deviceDisplay.innerText = payload.data.CLIENT_IP;
       }
     }
   } catch (err) {
