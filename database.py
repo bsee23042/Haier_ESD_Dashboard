@@ -198,7 +198,13 @@ def init_engine(database_uri, connect_args=None):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
-    engine = create_engine(database_uri, connect_args=connect_args, future=True)
+            
+    engine_kwargs = {"connect_args": connect_args, "future": True}
+    if database_uri and database_uri.startswith("postgresql"):
+        engine_kwargs["pool_pre_ping"] = True
+        engine_kwargs["pool_recycle"] = 300
+        
+    engine = create_engine(database_uri, **engine_kwargs)
     SessionLocal = scoped_session(sessionmaker(bind=engine, autoflush=False, autocommit=False))
     return engine, SessionLocal
 

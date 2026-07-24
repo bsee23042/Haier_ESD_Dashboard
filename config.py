@@ -149,7 +149,13 @@ def get_config():
             
         if _raw_db_uri.startswith("postgresql://") or _raw_db_uri.startswith("sqlite://"):
             config_cls.SQLALCHEMY_DATABASE_URI = _raw_db_uri
-            config_cls.SQLALCHEMY_ENGINE_OPTIONS = {}
+            if _raw_db_uri.startswith("postgresql://"):
+                config_cls.SQLALCHEMY_ENGINE_OPTIONS = {
+                    "pool_pre_ping": True,
+                    "pool_recycle": 300,
+                }
+            else:
+                config_cls.SQLALCHEMY_ENGINE_OPTIONS = {}
         else:
             config_cls.SQLALCHEMY_DATABASE_URI = f"sqlite:///{BaseConfig.DATABASE_PATH}"
             config_cls.SQLALCHEMY_ENGINE_OPTIONS = {
