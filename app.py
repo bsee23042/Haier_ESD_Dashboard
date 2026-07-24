@@ -394,31 +394,34 @@ scheduler.start()
 def seed_initial_records():
     session_ref = db.get_session()
     try:
-        admin_user = session_ref.query(db.User).filter_by(username="admin").first()
-        if not admin_user:
-            admin_user = db.User(
-                username="admin",
-                password_hash=generate_password_hash("admin123"),
-                role="ADMIN",
-                full_name="Haier Admin Supervisor"
-            )
-            session_ref.add(admin_user)
+        user_specs = [
+            ("admin", "admin123", "ADMIN", "Muhammad Anas"),
+            ("umair", "umair123", "SUPERVISOR", "Sir Umair Ramzan"),
+            ("operator", "operator123", "OPERATOR", "Anas_Zaid_Fatima"),
+            ("nadeem", "nadeem123", "VIEWER", "Sir Nadeem Safdar"),
+        ]
 
-        anas_user = session_ref.query(db.User).filter_by(username="anas").first()
-        if not anas_user:
-            anas_user = db.User(
-                username="anas",
-                password_hash=generate_password_hash("anas123"),
-                role="ADMIN",
-                full_name="Muhammad Anas",
-                is_active=True
-            )
-            session_ref.add(anas_user)
-        else:
-            anas_user.password_hash = generate_password_hash("anas123")
-            anas_user.full_name = "Muhammad Anas"
-            anas_user.role = "ADMIN"
-            session_ref.add(anas_user)
+        for uname, pwd, r, fname in user_specs:
+            usr = session_ref.query(db.User).filter_by(username=uname).first()
+            if not usr:
+                usr = db.User(
+                    username=uname,
+                    password_hash=generate_password_hash(pwd),
+                    role=r,
+                    full_name=fname,
+                    is_active=True
+                )
+                session_ref.add(usr)
+            else:
+                usr.full_name = fname
+                usr.role = r
+                usr.is_active = True
+                session_ref.add(usr)
+
+        # Remove legacy duplicate 'anas' account if exists to keep list clean
+        legacy_anas = session_ref.query(db.User).filter_by(username="anas").first()
+        if legacy_anas:
+            session_ref.delete(legacy_anas)
 
         # 1. Clean up events and stations > 20 to avoid integrity errors and ensure exactly 20 stations
         extra_events = session_ref.query(db.ESDEvent).filter(db.ESDEvent.station_id > 20).all()
