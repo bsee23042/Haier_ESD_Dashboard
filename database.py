@@ -182,17 +182,22 @@ class SystemConfig(Base):
 @event.listens_for(Engine, "connect")
 def _enable_sqlite_pragmas(dbapi_connection, connection_record):
     """Enable WAL mode + foreign keys on every new SQLite connection."""
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.close()
+    if type(dbapi_connection).__module__.startswith("sqlite3"):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
 
 
 def init_engine(database_uri, connect_args=None):
     """Create the global engine + scoped session factory. Call once at startup."""
     global engine, SessionLocal
-    connect_args = connect_args or {"check_same_thread": False}
+    if connect_args is None:
+        if database_uri and database_uri.startswith("sqlite"):
+            connect_args = {"check_same_thread": False}
+        else:
+            connect_args = {}
     engine = create_engine(database_uri, connect_args=connect_args, future=True)
     SessionLocal = scoped_session(sessionmaker(bind=engine, autoflush=False, autocommit=False))
     return engine, SessionLocal
@@ -200,11 +205,7 @@ def init_engine(database_uri, connect_args=None):
 
 def _resolve_database_uri():
     """
-    Figure out where the SQLite file should live. Tries config.get_config()
-    first (so this stays in sync with your app's Config class if it defines
-    SQLALCHEMY_DATABASE_URI / DATABASE_DIR); falls back to a local ./database
-    folder next to this file if config.py doesn't define those, so init_db()
-    can be called with zero arguments either way.
+    Figure out where the database lives (SQLite or PostgreSQL).
     """
     try:
         from config import get_config
@@ -212,11 +213,14 @@ def _resolve_database_uri():
         uri = getattr(cfg, "SQLALCHEMY_DATABASE_URI", None)
         connect_args = None
         engine_options = getattr(cfg, "SQLALCHEMY_ENGINE_OPTIONS", None)
-        if engine_options:
+        if engine_options and "connect_args" in engine_options:
             connect_args = engine_options.get("connect_args")
+        elif uri and not uri.startswith("sqlite"):
+            connect_args = {}
+            
         if uri:
             db_dir = getattr(cfg, "DATABASE_DIR", None)
-            if db_dir:
+            if db_dir and uri.startswith("sqlite"):
                 os.makedirs(db_dir, exist_ok=True)
             return uri, connect_args
     except Exception:
@@ -225,7 +229,7 @@ def _resolve_database_uri():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     db_dir = os.path.join(base_dir, "database")
     os.makedirs(db_dir, exist_ok=True)
-    return f"sqlite:///{os.path.join(db_dir, 'esd_monitoring.db')}", None
+    return f"sqlite:///{os.path.join(db_dir, 'esd_monitoring.db')}", {"check_same_thread": False}
 
 
 def run_migrations(eng):

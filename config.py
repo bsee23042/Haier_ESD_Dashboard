@@ -138,5 +138,28 @@ def get_config():
     """Resolve the active config class from the ESD_ENV environment variable."""
     env_name = os.environ.get("ESD_ENV", "development").lower()
     config_cls = CONFIG_MAP.get(env_name, DevelopmentConfig)
+    
+    _raw_db_uri = os.environ.get("DATABASE_URL")
+    if _raw_db_uri:
+        _raw_db_uri = _raw_db_uri.strip()
+        if "channel_binding=" in _raw_db_uri:
+            _raw_db_uri = _raw_db_uri.split("&channel_binding=")[0].split("?channel_binding=")[0]
+        if _raw_db_uri.startswith("postgres://"):
+            _raw_db_uri = _raw_db_uri.replace("postgres://", "postgresql://", 1)
+            
+        if _raw_db_uri.startswith("postgresql://") or _raw_db_uri.startswith("sqlite://"):
+            config_cls.SQLALCHEMY_DATABASE_URI = _raw_db_uri
+            config_cls.SQLALCHEMY_ENGINE_OPTIONS = {}
+        else:
+            config_cls.SQLALCHEMY_DATABASE_URI = f"sqlite:///{BaseConfig.DATABASE_PATH}"
+            config_cls.SQLALCHEMY_ENGINE_OPTIONS = {
+                "connect_args": {"check_same_thread": False, "timeout": 15},
+            }
+    else:
+        config_cls.SQLALCHEMY_DATABASE_URI = f"sqlite:///{BaseConfig.DATABASE_PATH}"
+        config_cls.SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {"check_same_thread": False, "timeout": 15},
+        }
+
     config_cls.init_directories()
     return config_cls
