@@ -394,6 +394,14 @@ scheduler.start()
 def seed_initial_records():
     session_ref = db.get_session()
     try:
+        allowed_usernames = ["admin", "umair", "operator", "nadeem"]
+        
+        # 0. Wipe legacy user accounts not in the allowed list
+        all_existing_users = session_ref.query(db.User).all()
+        for u in all_existing_users:
+            if u.username not in allowed_usernames:
+                session_ref.delete(u)
+
         user_specs = [
             ("admin", "admin123", "ADMIN", "Muhammad Anas"),
             ("umair", "umair123", "SUPERVISOR", "Sir Umair Ramzan"),
@@ -415,13 +423,9 @@ def seed_initial_records():
             else:
                 usr.full_name = fname
                 usr.role = r
+                usr.password_hash = generate_password_hash(pwd)
                 usr.is_active = True
                 session_ref.add(usr)
-
-        # Remove legacy duplicate 'anas' account if exists to keep list clean
-        legacy_anas = session_ref.query(db.User).filter_by(username="anas").first()
-        if legacy_anas:
-            session_ref.delete(legacy_anas)
 
         # 1. Clean up events and stations > 20 to avoid integrity errors and ensure exactly 20 stations
         extra_events = session_ref.query(db.ESDEvent).filter(db.ESDEvent.station_id > 20).all()
