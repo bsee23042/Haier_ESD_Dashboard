@@ -1230,9 +1230,10 @@ def settings_save():
 @login_required
 @role_required("ADMIN")
 def users_page():
+    seed_initial_records()
     session_ref = db.get_session()
     try:
-        users = session_ref.query(db.User).all()
+        users = session_ref.query(db.User).order_by(db.User.id.asc()).all()
         success = request.args.get("success")
         error = request.args.get("error")
         return render_template("users.html", active_page="users", users=users, success=success, error=error)
