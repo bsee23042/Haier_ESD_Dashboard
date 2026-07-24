@@ -153,7 +153,7 @@
     </div>
   </div>
 
-  <!-- Export & Download Section (MOVED UP FOR QUICK ACCESS WITHOUT SCROLLING) -->
+  <!-- Export & Download Section -->
   <div style="display: flex; justify-content: space-between; align-items: center;">
     <h3 class="panel-title" style="margin-bottom: 0;">Export & Download Reports</h3>
     <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Interval: {{ selected_range|upper }}</span>
@@ -184,9 +184,17 @@
     </div>
   </div>
 
-  <!-- Detailed Period Log Table (MOVED DOWN BELOW EXPORTS) -->
+  <!-- Detailed Period Log Table with View All / Compact toggle -->
   <div class="card-container">
-    <h3 class="panel-title">Detailed Violations Log ({{ selected_range|upper }} Interval)</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 class="panel-title" style="margin-bottom: 0;">Detailed Violations Log ({{ selected_range|upper }} Interval)</h3>
+      {% if events|length > 5 %}
+        <button id="view-all-btn" onclick="toggleViewAll()" class="btn-primary" style="padding: 6px 14px; font-size: 0.75rem; background-color: var(--primary);">
+          👁️ View All ({{ events|length }} records)
+        </button>
+      {% endif %}
+    </div>
+
     <table class="table-custom">
       <thead>
         <tr>
@@ -203,7 +211,7 @@
       <tbody>
         {% if events %}
           {% for r in events %}
-            <tr>
+            <tr class="log-row {% if loop.index > 5 %}extra-log-row{% endif %}" style="{% if loop.index > 5 %}display: none;{% endif %}">
               <td style="text-align: center; font-weight: 700;">{{ loop.index }}</td>
               <td style="font-family: var(--font-mono); font-weight: 600;">{{ r.start_time }}</td>
               <td style="font-family: var(--font-mono); font-weight: 600; color: {% if r.end_time == 'Active' %}var(--status-violation){% else %}var(--text-main){% endif %};">{{ r.end_time }}</td>
@@ -244,6 +252,53 @@
         {% endif %}
       </tbody>
     </table>
+
+    {% if events|length > 5 %}
+      <div id="bottom-view-all-container" style="text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border-color);">
+        <button id="bottom-view-all-btn" onclick="toggleViewAll()" class="btn-primary" style="padding: 8px 20px; font-size: 0.78rem; background-color: var(--primary);">
+          👁️ View All {{ events|length }} Records
+        </button>
+      </div>
+    {% endif %}
   </div>
 </div>
+
+<script>
+  function toggleViewAll() {
+    const extraRows = document.querySelectorAll('.extra-log-row');
+    const topBtn = document.getElementById('view-all-btn');
+    const bottomBtn = document.getElementById('bottom-view-all-btn');
+    if (!extraRows.length) return;
+
+    const isCurrentlyHidden = (extraRows[0].style.display === 'none');
+    
+    extraRows.forEach(row => {
+      row.style.display = isCurrentlyHidden ? 'table-row' : 'none';
+    });
+
+    if (isCurrentlyHidden) {
+      if (topBtn) {
+        topBtn.innerHTML = '⚡ Show Less (Top 5)';
+        topBtn.style.backgroundColor = 'var(--border-color)';
+        topBtn.style.color = 'var(--text-main)';
+      }
+      if (bottomBtn) {
+        bottomBtn.innerHTML = '⚡ Show Less (Top 5)';
+        bottomBtn.style.backgroundColor = 'var(--border-color)';
+        bottomBtn.style.color = 'var(--text-main)';
+      }
+    } else {
+      if (topBtn) {
+        topBtn.innerHTML = '👁️ View All ({{ events|length }} records)';
+        topBtn.style.backgroundColor = 'var(--primary)';
+        topBtn.style.color = '#ffffff';
+      }
+      if (bottomBtn) {
+        bottomBtn.innerHTML = '👁️ View All {{ events|length }} Records';
+        bottomBtn.style.backgroundColor = 'var(--primary)';
+        bottomBtn.style.color = '#ffffff';
+      }
+    }
+  }
+</script>
 {% endblock %}
